@@ -50,6 +50,8 @@ def log():
 	if message == 'Loaded':
 		print
 		print
+	elif message == '~~buffer~~':
+		return ''
 	print 'Log: ', message
 	return ''
 

