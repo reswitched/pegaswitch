@@ -6,8 +6,11 @@ with file('memdump.json', 'r') as fp:
 	first = min(map(int, data.keys()))
 	last = max(map(int, data.keys()))
 
+	print '%016x' % first
+	5 / 0
+
 	all = []
-	for i in xrange(0, (last - first) + 4096, 4096):
+	for i in xrange(0, (last - first) + 65536, 65536):
 		sub = data[str(i + first)]
 		for elem in sub:
 			all.append(elem & 0xFF)
