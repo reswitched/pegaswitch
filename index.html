@@ -17,18 +17,7 @@ pre {
 }
 </style>
 
-<script>
-  function changeLocation () {
-    window.location.href = document.querySelector('#address').value.toString()
-  }
-  window.onload = function () {
-    document.querySelector('#address').value = window.location.href
-  }
-</script>
-
-<input class='address' id='address' type='text' /><button class="smallButton" onclick="changeLocation()">go</button><br />
-
-<button class='largeButton' onclick="location.reload()">Reload</button> <button class='largeButton' onclick="doItAll();">Test</button><br><br>
+<button id="foo" class='largeButton' onclick="location.reload()">Reload</button> <button class='largeButton' onclick="doItAll();">Test</button><br><br>
 
 <script>
 var onSwitch = true;
