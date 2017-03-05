@@ -61,4 +61,20 @@ def error():
 	print 'ERR [%i]: ' % line, message
 	return ''
 
+memory = {}
+@app.route('/memdump', methods=['POST'])
+@nocache
+def memdump():
+	lo, hi, data = json.loads(request.form['data'])
+
+	base = (int(hi, 16) << 32) | int(lo, 16)
+
+	print 'Got memory at base 0x%016x' % base
+
+	memory[base] = data
+	with file('memdump.json', 'w') as fp:
+		fp.write(json.dumps(memory))
+
+	return ''
+
 app.run(host='0.0.0.0', port=80, threaded=True)
