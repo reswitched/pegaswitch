@@ -504,6 +504,12 @@ function doExploit(buf, stale, temp) {
 		log('Restored data page.');
 
 		log('Native code at ' + paddr(funcptr) + ' returned: ' + paddr(ret));
+
+		free(context_load_struct);
+		free(block_struct_1);
+		free(block_struct_2);
+		free(savearea);
+		free(loadarea);
 		return ret;
 
 	}
