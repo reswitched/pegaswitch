@@ -564,7 +564,7 @@ function doItAll() {
 	log('Triggered.  New length: 0x' + stale.length.toString(16));
 
 	if(stale.length < 2 || stale.length == 0x1003) {
-		log('Bad length;');
+		log('Bad length');
 		location.reload();
 		return;
 	}
