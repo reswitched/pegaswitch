@@ -579,31 +579,72 @@ sploitcore.prototype.querymem = function(addr) {
 	log('PageInfo: ' + paddr(this.read8(pageinfo, 0 >> 2)));
 	this.free(meminfo);
 	this.free(pageinfo);
+};
 
-}
+sploitcore.prototype.bridge = function(ptr, rettype) {
+	if(typeof(ptr) == 'number')
+		ptr = add2(this.mainaddr, ptr);
+	var self = this;
+	var args = Array.prototype.slice.call(arguments, [2]);
+	
+	var sub = function() {
+		if(arguments.length != args.length)
+			throw 'Mismatched argument counts';
+
+		var nargs = [];
+		for(var i = 0; i < args.length; ++i) {
+			var inp = arguments[i], type = args[i], v;
+			switch(type) {
+				case int: case void_p:
+					if(typeof(inp) == 'number')
+						v = [inp, 0];
+					else
+						v = inp;
+					break;
+				case char_p:
+					inp = Array.prototype.map.call(inp, function(x) { return x.charCodeAt(0); });
+					var len = inp.length + 1;
+					if(len % 4 != 0)
+						len += 4 - (len % 4);
+					v = self.malloc(len);
+					for(var i = 0; i < len; i += 4) {
+						var a = inp.length > i+0 ? inp[i+0] : 0, b = inp.length > i+1 ? inp[i+1] : 0;
+						var c = inp.length > i+2 ? inp[i+2] : 0, d = inp.length > i+3 ? inp[i+3] : 0;
+						self.write4((d << 24) | (c << 16) | (b << 8) | a, v, i >> 2);
+					}
+					break;
+			}
+			nargs.push(v);
+		}
+
+		var retval = self.call(ptr, nargs);
+
+		for(var i = 0; i < args.length; ++i) {
+			var na = nargs[i], type = args[i];
+			switch(type) {
+				case char_p:
+					self.free(na);
+					break;
+			}
+		}
+
+		return retval; // XXX: Do type processing
+	};
+
+	sub.addr = ptr;
+
+	return sub;
+};
+
+var int = 'int', char_p = 'char*', void_p = 'void*';
 
 function main() {
 	var sc = new sploitcore();
 
-	// Example: Call strlen on a string.
-	var strlen = 0x43A6E8;
-	var strbuf = sc.malloc(0x100);
 	var str = 'this is a test string of length 0x25!';
 
-	// Shitty memcpy of the string into buffer
-	for(var i = 0; i < 0x100 && i < str.length; i += 4) {
-		var val = 0;
-		for(var j = 0; j < 4 && i + j < str.length; j++) {
-			val |= (str.charCodeAt(i+j) & 0xFF) << (8 * j);
-		}
-		sc.write4(val, strbuf, i >> 2);
-	}
-	if(str.length % 4 == 0) {
-		sc.write4(0, strbuf, str.length >> 2);
-	}
+	var strlen = sc.bridge(0x43A6E8, int, char_p);
+	log(paddr(strlen(str)));
 
-	sc.call(strlen, [strbuf]);
-	sc.free(strbuf);
-
-	sc.querymem(sc.mref(strlen));
+	sc.querymem(strlen.addr);
 }
