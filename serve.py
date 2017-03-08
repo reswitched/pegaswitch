@@ -40,9 +40,12 @@ def main():
 		rnd += '}\n'
 	return file('main.js').read().replace('FAKE', fake).replace('RND', rnd)
 
+failures = successes = 0
+
 @app.route('/log', methods=['POST'])
 @nocache
 def log():
+	global failures, successes
 	if request.form['data'] == 'undefined':
 		message = '??undefined??'
 	else:
@@ -50,7 +53,13 @@ def log():
 	if message == 'Loaded':
 		print
 		print
-	elif message == '~~buffer~~':
+		if failures != 0 or successes != 0:
+			print 'Success percentage: %.2f' % (successes / float(failures + successes) * 100)
+	elif message.startswith('~~'):
+		if message == '~~failed':
+			failures += 1
+		elif message == '~~success':
+			successes += 1
 		return ''
 	print 'Log: ', message
 	return ''
