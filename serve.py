@@ -55,7 +55,7 @@ def log():
 		print
 		if failures != 0 or successes != 0:
 			print 'Success percentage: %.2f' % (successes / float(failures + successes) * 100)
-	elif message.startswith('~~'):
+	elif isinstance(message, unicode) and message.startswith('~~'):
 		if message == '~~failed':
 			failures += 1
 		elif message == '~~success':
