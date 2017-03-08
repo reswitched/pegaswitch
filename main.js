@@ -551,6 +551,37 @@ sploitcore.prototype.call = function(funcptr, args, registers) {
 	return ret;
 };
 
+sploitcore.prototype.querymem = function(addr) {
+	var meminfo = this.malloc(0x20);
+	var pageinfo = this.malloc(0x8);
+	var svcQueryMemory = 0x3BBE48;
+
+	var memperms = ['NONE', 'R', 'W', 'RW', 'X', 'RX', 'WX', 'RWX'];
+	var memstates = ['FREE', 'RESERVED', 'IO', 'STATIC', 'CODE', 'PRIVATE', 'SHARED', 'CONTINUOUS', 'ALIASED', 'ALIAS', 'ALIAS CODE', 'LOCKED'];
+	this.call(svcQueryMemory, [meminfo, pageinfo, addr]);
+	log('svcQueryMemory for ' + paddr(addr))
+	log('Base Virtual Address: ' + paddr(this.read8(meminfo, 0 >> 2)));
+	log('Size: ' + paddr(this.read8(meminfo, 0x8 >> 2)));
+
+	var ms = this.read8(meminfo, 0x10 >> 2);
+	if (ms[1] == 0 && ms[0] < memstates.length) {
+		log('MemoryState: ' + memstates[ms[0]]);
+	} else {
+		log('MemoryState: ' + paddr(ms));
+	}
+	var mp = this.read8(meminfo, 0x18 >> 2);
+	if (mp[1] == 0 && mp[0] < memperms.length) {
+		log('Permissions: ' + memperms[mp[0]]);
+	} else {
+		log('Permissions: ' + paddr(mp));
+	}
+
+	log('PageInfo: ' + paddr(this.read8(pageinfo, 0 >> 2)));
+	this.free(meminfo);
+	this.free(pageinfo);
+
+}
+
 function main() {
 	var sc = new sploitcore();
 
@@ -573,4 +604,6 @@ function main() {
 
 	sc.call(strlen, [strbuf]);
 	sc.free(strbuf);
+
+	sc.querymem(sc.mref(strlen));
 }
