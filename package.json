@@ -1,0 +1,22 @@
+{
+  "name": "pegaswitch",
+  "version": "1.0.0",
+  "description": "",
+  "main": "debug.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daeken/Pegaswitch.git"
+  },
+  "author": "Adam Brady <adam@boxxen.org>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/daeken/Pegaswitch/issues"
+  },
+  "homepage": "https://github.com/daeken/Pegaswitch#readme",
+  "dependencies": {
+    "ws": "^2.2.0"
+  }
+}

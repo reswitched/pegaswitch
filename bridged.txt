@@ -1,0 +1,2 @@
+# <name> <addr> <return> <...args>
+strlen 0x43A6E8 int char*

