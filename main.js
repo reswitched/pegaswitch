@@ -790,7 +790,6 @@ sploitcore.prototype.dirlist = function(dirPath) {
 	var handlePtr = this.malloc(0x8);
 	var sDirInfo = this.malloc(0x200);
 	var sFileList = this.malloc(fileListSize);
-	var dirPath = 'shareddata:/';//'shareddata:/browser';
 	var ret = OpenDirectory(handlePtr,dirPath,3);
 	log('OpenDirectory ret=' + ret);
 	
