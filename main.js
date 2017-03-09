@@ -779,6 +779,65 @@ sploitcore.prototype.memdump = function(offset, size, fn) {
 	}
 }
 
+sploitcore.prototype.dirlist = function(dirPath) {
+	var OpenDirectory = this.bridge(0x233894, int, void_p, char_p, int); //int OpenDirectory(_QWORD *handle, char *path, unsigned int flags)
+	var ReadDirectory = this.bridge(0x2328B4, int, void_p, void_p, void_p, int); //int ReadDirectory(_QWORD *sDirInfo, _QWORD *out, _QWORD *handle, __int64 size)
+	var CloseDirectory = this.bridge(0x232828, int, void_p); //int CloseDirectory(_QWORD *handle)
+	
+	var entrySize = 0x310;
+	var numFilesToList = 128;
+	var fileListSize = numFilesToList*entrySize;
+	var handlePtr = this.malloc(0x8);
+	var sDirInfo = this.malloc(0x200);
+	var sFileList = this.malloc(fileListSize);
+	var dirPath = 'shareddata:/';//'shareddata:/browser';
+	var ret = OpenDirectory(handlePtr,dirPath,3);
+	log('OpenDirectory ret=' + ret);
+	
+	var handle = this.read8(handlePtr);
+	ret = ReadDirectory(sDirInfo,sFileList,handle,numFilesToList);
+	log('ReadDirectory ret=' + ret);
+	
+	var arr = new ArrayBuffer(fileListSize);
+	var int8view = new Uint8Array(arr);
+	var int32view = new Uint32Array(arr);
+	
+	log('File Listing for ' + dirPath);
+	for(var i = 0; i < fileListSize/4; ++i)
+	{
+		int32view[i] = this.read4(sFileList, i);
+		if((i % (entrySize/4)) == ((entrySize/4)-1))
+		{
+			var string = '';
+			var j=Math.floor(i/(entrySize/4)) * entrySize;
+			while(int8view[j] != 0)
+			{
+				string += String.fromCharCode(int8view[j]);
+				j++;
+			}
+			if(string != '')
+			{
+				log(dirPath + string);
+			}
+		}
+	}
+	log('End Listing');
+	
+	/*var xhr = new XMLHttpRequest();
+	xhr.open('POST', '/filedump', false);
+	xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+	xhr.setRequestHeader('Content-Disposition', '/shareddata.bin');
+	xhr.send(int8view);
+	xhr = null;*/
+	
+	ret = CloseDirectory(handle);
+	log('CloseDirectory ret=' + ret);
+	
+	this.free(handle);
+	this.free(sFileList);
+	this.free(sDirInfo);
+}
+
 sploitcore.prototype.bridge = function(ptr, rettype) {
 	if(typeof(ptr) == 'number')
 		ptr = add2(this.mainaddr, ptr);
@@ -846,7 +905,7 @@ function main() {
 
 	sc.querymem(strlen.addr);*/
 
-	var addr = [0, 0];
+	/*var addr = [0, 0];
 	last = [0, 0];
 	while(true) {
 		var mi = sc.querymem(addr);
@@ -861,21 +920,24 @@ function main() {
 			log('End');
 			break;
 		}
-	}
+	}*/
 	
-	
+	sc.dirlist('shareddata:/');
+
 	//folders
 	//sc.dumpFile('shareddata:/');
 	//sc.dumpFile('oceanShared:/');
+	//sc.dumpFile('oceanShared:/lyt');
 	//sc.dumpFile('shareddata:/webdatabase');
 	//sc.dumpFile('shareddata:/browser/emoji');
 	//sc.dumpFile('shareddata:/browser/page');
-	
+
 	//files
+	//sc.dumpFile('oceanShared:/dummy.txt');
 	//sc.dumpFile('shareddata:/buildinfo/buildinfo.dat');
 	//sc.dumpFile('shareddata:/browser/Skin.dat');
 	//sc.dumpFile('shareddata:/browser/MediaControls.css');
-	sc.dumpFile('shareddata:/browser/MediaControls.js');
+	//sc.dumpFile('shareddata:/browser/MediaControls.js');
 	//sc.dumpFile('shareddata:/browser/ErrorPageTemplate.html');
 	//sc.dumpFile('shareddata:/browser/ErrorPageSubFrameTemplate.html');
 	//sc.dumpFile('shareddata:/browser/ErrorPageFilteringTemplate.html');
@@ -892,5 +954,5 @@ function main() {
 	//sc.dumpFile('data:/sound/cruiser.bfsar');
 
 	//var ret = 0x3F99DC;
-    //sc.call(ret, [256,257,258,259,260,261,262,263], [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], true);
+	//sc.call(ret, [256,257,258,259,260,261,262,263], [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], true);
 }
