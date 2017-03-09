@@ -380,8 +380,7 @@ sploitcore.prototype.getSP = function() {
 		.text:00000000003E2730                 MOV             X24, SP
 		.text:00000000003E2734                 BLR             X9
 	*/
-	var test = 0x39FEEC; // First gadget addr
-	var jaddr = add2(this.mainaddr, test);
+	var jaddr = this.mref(0x39FEEC); // First gadget addr
 	dlog('New jump at ' + paddr(jaddr));
 	dlog('Assigning function pointer');
 
