@@ -619,6 +619,8 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
                 log('X9: ' + paddr(this.read8(dumparea, 0x328 >> 2)));
             } else if (i == 20) {
                 log('X20: ' + paddr(this.read8(dumparea, 0x300 >> 2)));
+            } else if (i == 16 || i == 19 || i == 29 || i == 30) { 
+            	log('X' + i + ': Not dumpable.');
             } else {
                 log('X' + i + ': ' + paddr(this.read8(dumparea, (8 * i) >> 2)));
             }
