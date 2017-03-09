@@ -965,7 +965,7 @@ function main() {
 			log(paddr(mi[0]) + ' - ' + paddr(addr) + '  ' + mi[2] + ' ' + mi[3]);
 			
 			if(mi[3] != 'NONE')
-				sc.memdump(mi[0], mi[1][0], 'memdumps/'+paddr(mi[0]) + ' - ' + paddr(addr) + '.bin');
+				sc.memdump(mi[0], mi[1][0], 'memdumps/'+paddr(mi[0]) + ' - ' + paddr(addr) + ' - ' + mi[3] + '.bin');
 			
 			if(addr[1] < last[1]) {
 				log('End');
