@@ -88,4 +88,16 @@ def memdump():
 
 	return ''
 
+@app.route('/filedump', methods=['POST'])
+@nocache
+def filedump():
+    fn = request.headers['Content-Disposition']
+    if '/' in fn:
+        fn = fn[fn.rindex('/') + 1:]
+    with open('files/%s' % fn, 'ab') as f:
+        f.write(request.data)
+    print 'wrote to files/%s!' % fn
+    return ''
+
 app.run(host='0.0.0.0', port=80, threaded=True)
+

