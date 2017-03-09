@@ -735,6 +735,50 @@ sploitcore.prototype.dumpFile = function(fn) {
 	}
 };
 
+sploitcore.prototype.memdump = function(offset, size, fn) {
+	var totalSize = size;
+	
+	var arr = new ArrayBuffer(0x10000);
+	var int8view = new Uint8Array(arr);
+	var int32view = new Uint32Array(arr);
+	var idx = 0;
+	
+	log('totalSize = ' + totalSize);
+	while(totalSize > 0)
+	{
+		log('In loop');
+		if(totalSize >= 0x10000)
+		{
+			size = 0x10000;
+		}
+		else
+		{
+			size = totalSize;
+			arr = new ArrayBuffer(size);
+			int8view = new Uint8Array(arr);
+			int32view = new Uint32Array(arr);
+		}
+		
+		log('Reading data at ' + idx);
+		
+		for(var i = 0; i < size/4; ++i)
+			int32view[i] = this.read4(offset, idx+i);
+		
+		idx += size/4;
+		
+		log('Sending data');
+		
+		var xhr = new XMLHttpRequest();
+		xhr.open('POST', '/filedump', false);
+		xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+		xhr.setRequestHeader('Content-Disposition', fn);
+		xhr.send(int8view);
+		xhr = null;
+		
+		totalSize -= size;
+	}
+}
+
 sploitcore.prototype.bridge = function(ptr, rettype) {
 	if(typeof(ptr) == 'number')
 		ptr = add2(this.mainaddr, ptr);
@@ -802,18 +846,23 @@ function main() {
 
 	sc.querymem(strlen.addr);*/
 
-	/*var addr = [0, 0];
+	var addr = [0, 0];
 	last = [0, 0];
 	while(true) {
 		var mi = sc.querymem(addr);
 		last = addr;
 		addr = add2(mi[0], mi[1]);
 		log(paddr(mi[0]) + ' - ' + paddr(addr) + '  ' + mi[2] + ' ' + mi[3]);
+		
+		//if(mi[3] != 'NONE')
+		//	sc.memdump(mi[0], mi[1][0], '/'+paddr(mi[0]) + ' - ' + paddr(addr) + '.bin');
+		
 		if(addr[1] < last[1]) {
 			log('End');
 			break;
 		}
-	}*/
+	}
+	
 	
 	//folders
 	//sc.dumpFile('shareddata:/');
@@ -842,6 +891,6 @@ function main() {
 	//sc.dumpFile('shareddata:/dll/webkit_wkc.nro');
 	//sc.dumpFile('data:/sound/cruiser.bfsar');
 
-	var ret = 0x3F99DC;
-    sc.call(ret, [256,257,258,259,260,261,262,263], [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], true);
+	//var ret = 0x3F99DC;
+    //sc.call(ret, [256,257,258,259,260,261,262,263], [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], true);
 }
