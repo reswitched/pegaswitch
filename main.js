@@ -620,7 +620,7 @@ sploitcore.prototype.str2buf = function(str) {
 
 sploitcore.prototype.getFileSize = function(fhandle) {
 	var fseek = this.bridge(0x438B18, null, void_p, int, int);
-	var ftell = this.bridge(0x438BE0, int);
+	var ftell = this.bridge(0x438BE0, int, void_p);
 
 	fseek(fhandle, 0, 2);
 	var fsize = ftell(fhandle);
@@ -634,6 +634,7 @@ sploitcore.prototype.dumpFile = function(fn) {
 	var fread = this.bridge(0x438A14, int, void_p, int, int, void_p);
 
 	var fhandle = fopen(fn, 'r');
+	log('foo ' + paddr(fhandle));
 	if (!nullptr(fhandle)) {
 		var fsize = this.getFileSize(fhandle);
 		var ofs = 0;
@@ -667,7 +668,7 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 		ptr = add2(this.mainaddr, ptr);
 	var self = this;
 	var args = Array.prototype.slice.call(arguments, [2]);
-	
+
 	var sub = function() {
 		if(arguments.length != args.length)
 			throw 'Mismatched argument counts';
@@ -688,10 +689,10 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 					if(len % 4 != 0)
 						len += 4 - (len % 4);
 					v = self.malloc(len);
-					for(var i = 0; i < len; i += 4) {
-						var a = inp.length > i+0 ? inp[i+0] : 0, b = inp.length > i+1 ? inp[i+1] : 0;
-						var c = inp.length > i+2 ? inp[i+2] : 0, d = inp.length > i+3 ? inp[i+3] : 0;
-						self.write4((d << 24) | (c << 16) | (b << 8) | a, v, i >> 2);
+					for(var j = 0; j < len; j += 4) {
+						var a = inp.length > j+0 ? inp[j+0] : 0, b = inp.length > j+1 ? inp[j+1] : 0;
+						var c = inp.length > j+2 ? inp[j+2] : 0, d = inp.length > j+3 ? inp[j+3] : 0;
+						self.write4((d << 24) | (c << 16) | (b << 8) | a, v, j >> 2);
 					}
 					break;
 			}
@@ -729,7 +730,7 @@ function main() {
 
 	sc.querymem(strlen.addr);*/
 
-	var addr = [0, 0];
+	/*var addr = [0, 0];
 	last = [0, 0];
 	while(true) {
 		var mi = sc.querymem(addr);
@@ -740,7 +741,7 @@ function main() {
 			log('End');
 			break;
 		}
-	}
+	}*/
 	
 	//folders
 	//sc.dumpFile('shareddata:/');
@@ -753,7 +754,7 @@ function main() {
 	//sc.dumpFile('shareddata:/buildinfo/buildinfo.dat');
 	//sc.dumpFile('shareddata:/browser/Skin.dat');
 	//sc.dumpFile('shareddata:/browser/MediaControls.css');
-	//sc.dumpFile('shareddata:/browser/MediaControls.js');
+	sc.dumpFile('shareddata:/browser/MediaControls.js');
 	//sc.dumpFile('shareddata:/browser/ErrorPageTemplate.html');
 	//sc.dumpFile('shareddata:/browser/ErrorPageSubFrameTemplate.html');
 	//sc.dumpFile('shareddata:/browser/ErrorPageFilteringTemplate.html');
