@@ -809,6 +809,8 @@ sploitcore.prototype.dirlist = function(dirPath) {
 		{
 			var string = '';
 			var j=Math.floor(i/(entrySize/4)) * entrySize;
+			var isFile = (j + 0x304)/4;
+			var fileSize = (j + 0x304)/4;
 			while(int8view[j] != 0)
 			{
 				string += String.fromCharCode(int8view[j]);
@@ -816,7 +818,7 @@ sploitcore.prototype.dirlist = function(dirPath) {
 			}
 			if(string != '')
 			{
-				log(dirPath + string);
+				log(((int32view[isFile] != 0) ? "FILE   " : "FOLDER ") + dirPath + string + ' ' + ((int32view[isFile] != 0) ? ' Size = ' + fileSize : ''));
 			}
 		}
 	}
