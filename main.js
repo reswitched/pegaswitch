@@ -726,8 +726,9 @@ sploitcore.prototype.getFileSize = function(fhandle) {
 };
 
 sploitcore.prototype.dumpFile = function(fn) {
-	var fopen = this.bridge(0x43DDB4, void_p, char_p, char_p);
-	var fread = this.bridge(0x438A14, int, void_p, int, int, void_p);
+	var fopen = this.bridge(0x43DDB4, void_p, char_p, char_p); //FILE * fopen ( const char * filename, const char * mode );
+	var fread = this.bridge(0x438A14, int, void_p, int, int, void_p); //size_t fread ( void * ptr, size_t size, size_t count, FILE * stream );
+	var fclose = this.bridge(0x4384D0, int, void_p); //int fclose ( FILE * stream );
 
 	var fhandle = fopen(fn, 'r');
 	log('foo ' + paddr(fhandle));
@@ -754,6 +755,8 @@ sploitcore.prototype.dumpFile = function(fn) {
 			sz -= 0x800000;
 		}
 		log(fn + ' is ' + paddr(fsize) + ' bytes.');
+		
+		fclose(fhandle);
 	} else {
 		log('Failed to open file '+ fn + '!');
 	}
@@ -802,6 +805,8 @@ sploitcore.prototype.memdump = function(offset, size, fn) {
 }
 
 sploitcore.prototype.dirlist = function(dirPath) {
+	var dumpFiles = true;
+	
 	var OpenDirectory = this.bridge(0x233894, int, void_p, char_p, int); //int OpenDirectory(_QWORD *handle, char *path, unsigned int flags)
 	var ReadDirectory = this.bridge(0x2328B4, int, void_p, void_p, void_p, int); //int ReadDirectory(_QWORD *sDirInfo, _QWORD *out, _QWORD *handle, __int64 size)
 	var CloseDirectory = this.bridge(0x232828, int, void_p); //int CloseDirectory(_QWORD *handle)
@@ -845,6 +850,11 @@ sploitcore.prototype.dirlist = function(dirPath) {
 				if(int32view[isFile] == 0) //is Folder
 				{
 					this.dirlist(dirPath + string + '/');
+				}
+				else
+				{
+					if(dumpFiles)
+						this.dumpFile(dirPath + string);
 				}
 			}
 		}
@@ -978,12 +988,19 @@ function main() {
 	sc.dirlist('shareddata:/');
 
 	//folders
-	//sc.dumpFile('shareddata:/');
-	//sc.dumpFile('oceanShared:/');
-	//sc.dumpFile('oceanShared:/lyt');
-	//sc.dumpFile('shareddata:/webdatabase');
-	//sc.dumpFile('shareddata:/browser/emoji');
-	//sc.dumpFile('shareddata:/browser/page');
+	//sc.dirlist('data:/');
+	//sc.dirlist('offline:/'); //crashes
+	//sc.dirlist('sd:/'); //crashes
+	//sc.dirlist('sdcard:/'); //crashes
+	//sc.dirlist('saveuser:/'); //crashes
+	//sc.dirlist('savecommon:/'); //crashes
+	//sc.dirlist('blacklist:/');
+	//sc.dirlist('shareddata:/');
+	//sc.dirlist('oceanShared:/');
+	//sc.dirlist('oceanShared:/lyt');
+	//sc.dirlist('shareddata:/webdatabase');
+	//sc.dirlist('shareddata:/browser/emoji');
+	//sc.dirlist('shareddata:/browser/page');
 
 	//files
 	//sc.dumpFile('oceanShared:/dummy.txt');
