@@ -1,4 +1,4 @@
-var DEBUG = true;
+var DEBUG = false;
 
 function send(ep, data) {
 	data = JSON.stringify(data);
@@ -762,18 +762,19 @@ sploitcore.prototype.dumpFile = function(fn) {
 sploitcore.prototype.memdump = function(offset, size, fn) {
 	var totalSize = size;
 	
-	var arr = new ArrayBuffer(0x10000);
+	var arr = new ArrayBuffer(0x800000);
 	var int8view = new Uint8Array(arr);
 	var int32view = new Uint32Array(arr);
 	var idx = 0;
+
+	var memcpy = this.bridge(0x44338C, int, void_p, void_p, int);
 	
-	log('totalSize = ' + totalSize);
+	log('Dumping memory!');
 	while(totalSize > 0)
 	{
-		log('In loop');
-		if(totalSize >= 0x10000)
+		if(totalSize >= 0x800000)
 		{
-			size = 0x10000;
+			size = 0x800000;
 		}
 		else
 		{
@@ -783,15 +784,11 @@ sploitcore.prototype.memdump = function(offset, size, fn) {
 			int32view = new Uint32Array(arr);
 		}
 		
-		log('Reading data at ' + idx);
+
+		memcpy(this.read8(this.getAddr(int8view), 4), add2(offset, idx), size);
 		
-		for(var i = 0; i < size/4; ++i)
-			int32view[i] = this.read4(offset, idx+i);
-		
-		idx += size/4;
-		
-		log('Sending data');
-		
+		idx += size;
+				
 		var xhr = new XMLHttpRequest();
 		xhr.open('POST', '/filedump', false);
 		xhr.setRequestHeader('Content-Type', 'application/octet-stream');
@@ -801,6 +798,7 @@ sploitcore.prototype.memdump = function(offset, size, fn) {
 		
 		totalSize -= size;
 	}
+	log('Dumped memory succesfully!');
 }
 
 sploitcore.prototype.dirlist = function(dirPath) {
@@ -950,44 +948,32 @@ var int = 'int', bool = 'bool', char_p = 'char*', void_p = 'void*';
 function main() {
 	var sc = new sploitcore();
 
-	sc.gc();
-	sc.gc();
+	//sc.gc();
+	//sc.gc();
 
 	log(paddr(sc.getSP()));
 
-	var str = 'this is a test string of length 0x25!';
+	var dump_all_ram = false;
 
-	var strlen = sc.bridge(0x43A6E8, int, char_p);
-	log(paddr(strlen(str)));
-
-	sc.querymem(strlen.addr);
-	sc.gc();
-	sc.gc();
-	return;
-
-	/*var str = 'this is a test string of length 0x25!';
-
-	var strlen = sc.bridge(0x43A6E8, int, char_p);
-	log(paddr(strlen(str)));
-
-	sc.querymem(strlen.addr);*/
-
-	/*var addr = [0, 0];
-	last = [0, 0];
-	while(true) {
-		var mi = sc.querymem(addr);
-		last = addr;
-		addr = add2(mi[0], mi[1]);
-		log(paddr(mi[0]) + ' - ' + paddr(addr) + '  ' + mi[2] + ' ' + mi[3]);
-		
-		//if(mi[3] != 'NONE')
-		//	sc.memdump(mi[0], mi[1][0], '/'+paddr(mi[0]) + ' - ' + paddr(addr) + '.bin');
-		
-		if(addr[1] < last[1]) {
-			log('End');
-			break;
+	if (dump_all_ram) {
+		var addr = [0, 0];
+		var last = [0, 0];
+		while(true) {
+			var mi = sc.querymem(addr);
+			last = addr;
+			addr = add2(mi[0], mi[1]);
+			log(paddr(mi[0]) + ' - ' + paddr(addr) + '  ' + mi[2] + ' ' + mi[3]);
+			
+			if(mi[3] != 'NONE')
+				sc.memdump(mi[0], mi[1][0], 'memdumps/'+paddr(mi[0]) + ' - ' + paddr(addr) + '.bin');
+			
+			if(addr[1] < last[1]) {
+				log('End');
+				break;
+			}
 		}
-	}*/
+	}
+	
 	
 	sc.dirlist('shareddata:/');
 
