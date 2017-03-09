@@ -819,6 +819,11 @@ sploitcore.prototype.dirlist = function(dirPath) {
 			if(string != '')
 			{
 				log(((int32view[isFile] != 0) ? "FILE   " : "FOLDER ") + dirPath + string + ' ' + ((int32view[isFile] != 0) ? ' Size = ' + fileSize : ''));
+				
+				if(int32view[isFile] == 0) //is Folder
+				{
+					this.dirlist(dirPath + string + '/');
+				}
 			}
 		}
 	}
