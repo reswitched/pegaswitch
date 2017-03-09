@@ -1,4 +1,4 @@
-import json, logging, random
+import json, logging, random, os, errno
 from flask import Flask, request, make_response
 from functools import wraps, update_wrapper
 from datetime import datetime
@@ -92,11 +92,18 @@ def memdump():
 @nocache
 def filedump():
     fn = request.headers['Content-Disposition']
-    if '/' in fn:
-        fn = fn[fn.rindex('/') + 1:]
-    with open('files/%s' % fn, 'ab') as f:
+    #if '/' in fn:
+    #    fn = fn[fn.rindex('/') + 1:]
+    fn = fn.replace(":", "")
+    if not os.path.exists(os.path.dirname(fn)):
+        try:
+            os.makedirs(os.path.dirname(fn))
+        except OSError as exc: # Guard against race condition
+            if exc.errno != errno.EEXIST:
+                raise
+    with open(fn, 'ab') as f:
         f.write(request.data)
-    print 'wrote to files/%s!' % fn
+    print 'wrote to %s!' % fn
     return ''
 
 app.run(host='0.0.0.0', port=80, threaded=True)
