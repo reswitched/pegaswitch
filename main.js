@@ -1153,7 +1153,7 @@ function handler (sc, socket) {
 }
 
 function setupListener (sc) {
-  socket = new WebSocket("ws://172.16.0.13:81")
+  socket = new WebSocket("ws://" + window.location.hostname + ":81")
 
   socket.onmessage = handler(sc, socket)
 

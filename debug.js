@@ -30,39 +30,57 @@ const fns = {
     response: 'gotsp'
   },
   bridge: {
-    response: 'bridged'
+    response: 'bridged',
+    minArgs: 3,
+    help: 'bridge <name> <addr> <retval> <...args>'
   },
   bridges: {
     response: 'bridges'
   },
   call: {
-    response: 'call'
+    response: 'call',
+    minArgs: 1,
+    help: 'call <name> <...args>'
   },
   gc: {
     response: 'gcran'
   },
-  querymem: {
-    response: 'memory'
-  },
   malloc: {
-    response: 'mallocd'
+    response: 'mallocd',
+    args: 1,
+    help: 'malloc <bytes>'
   },
   write4: {
     response: 'wrote4',
-    wait: false
+    wait: false,
+    minArgs: 2,
+    maxArgs: 3,
+    help: 'write4 <addr> <data> <offset=0>'
   },
   write8: {
     response: 'wrote8',
-    wait: false
+    wait: false,
+    minArgs: 2,
+    maxArgs: 3,
+    help: 'write8 <addr> <data> <offset=0>'
   },
   read4: {
-    response: 'rread'
+    response: 'rread',
+    minArgs: 1,
+    maxArgs: 2,
+    help: 'read4 <addr> <offset=0>'
   },
   read8: {
-    response: 'rread'
+    response: 'rread',
+    minArgs: 1,
+    maxArgs: 2,
+    help: 'read8 <addr> <offset=0>'
   },
   readstring: {
-    response: 'rreadstring'
+    response: 'rreadstring',
+    minArgs: 1,
+    maxArgs: 2,
+    help: 'readstring <addr> <bytes=4>'
   }
 }
 
@@ -108,6 +126,14 @@ function handle (input, context, filename, callback) {
 
   if (!fn) {
     return callback(null, 'unknown cmd')
+  }
+
+  if (
+    fn.args !== undefined && fn.args !== args.length ||
+    fn.minArgs !== undefined && fn.minArgs > args.length ||
+    fn.maxArgs !== undefined && args.length > fn.maxArgs
+  ) {
+    return callback(null, fn.help)
   }
 
   var handle = fn.handler || defaultHandler(saveVal, callback)
