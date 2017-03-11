@@ -21,12 +21,38 @@ function sendMsg (cmd, args = []) {
   }))
 }
 
+ee.on('error', function (message) {
+  console.error('ERROR:', message)
+})
+
 const fns = {
-  sp: 'gotsp',
-  bridge: 'bridged',
-  bridges: 'bridges',
-  call: 'call',
-  gc: 'gcran'
+  sp: {
+    response: 'gotsp'
+  },
+  bridge: {
+    response: 'bridged'
+  },
+  bridges: {
+    response: 'bridges'
+  },
+  call: {
+    response: 'call'
+  },
+  gc: {
+    response: 'gcran'
+  },
+  querymem: {
+    response: 'memory'
+  },
+  malloc: {
+    response: 'mallocd'
+  }
+}
+
+function defaultHandler (fn, callback) {
+  return function (response) {
+    return callback(null, response)
+  }
 }
 
 function handle (input, context, filename, callback) {
@@ -39,15 +65,13 @@ function handle (input, context, filename, callback) {
   let args = tmp.split(' ')
   let cmd = args.shift()
 
-  let returnFn = fns[cmd]
+  let fn = fns[cmd]
 
-  if (!returnFn) {
+  if (!fn) {
     return callback(null, 'unknown cmd')
   }
 
-  ee.once(returnFn, function (response) {
-    return callback(null, response)
-  })
+  ee.once(fn.response, fn.handler || defaultHandler(fn, callback))
 
   sendMsg(cmd, args)
 }
@@ -62,7 +86,7 @@ r.setPrompt('switch> ')
 
 wss.on('connection', function (ws) {
   connection = ws
-  console.log('Got connection')
+  console.log('Switch connected...')
 
   bridgedFns.forEach(function (fn) {
     if (!fn) return
@@ -71,7 +95,6 @@ wss.on('connection', function (ws) {
       cmd: 'bridge',
       args: args
     }))
-    console.log('Bridged', args[0])
   })
 
   r.resume()

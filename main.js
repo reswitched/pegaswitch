@@ -1,5 +1,7 @@
 var DEBUG = false;
 
+var socket
+
 function send(ep, data) {
 	data = JSON.stringify(data);
 	try {
@@ -23,6 +25,12 @@ function dlog(msg) {
 }
 window.onerror = function(msg, url, line) {
 	send('error', [line, msg]);
+  if (socket) {
+    socket.send(JSON.stringify({
+      type: 'error',
+      response: [ line, msg ]
+    }))
+  }
 	location.reload();
 };
 
@@ -1081,12 +1089,19 @@ function handler (sc, socket) {
         type: 'bridges',
         response: Object.keys(bridgedFns)
       }))
+    } else if (data.cmd === 'malloc') {
+      var size = parseInt(data.args[0])
+      var addr = sc.malloc(size)
+      socket.send(JSON.stringify({
+        type: 'mallocd',
+        response: paddr(addr)
+      }))
     }
 	}
 }
 
 function setupListener (sc) {
-  var socket = new WebSocket("ws://172.16.0.13:81")
+  socket = new WebSocket("ws://172.16.0.13:81")
 
   socket.onmessage = handler(sc, socket)
 
