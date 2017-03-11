@@ -45,6 +45,12 @@ function paddr(lo, hi) {
 	var shi = ('00000000' + hi.toString(16)).slice(-8);
 	return '0x' + shi + slo;
 }
+function parseAddr(addr) {
+  var arr = addr.replace('0x', '').match(/.{8}/g)
+  var hi = parseInt(arr[0], 16)
+  var lo = parseInt(arr[1], 16)
+  return [ lo, hi ]
+}
 function nullptr(addr) {
 	return addr[0] == 0 && addr[1] == 0;
 }
@@ -1095,6 +1101,23 @@ function handler (sc, socket) {
       socket.send(JSON.stringify({
         type: 'mallocd',
         response: paddr(addr)
+      }))
+    } else if (data.cmd === 'write4') {
+      log(JSON.stringify(data))
+      var addr = parseAddr(data.args[0])
+      var value = parseInt(data.args[1])
+
+      sc.write4(value, addr)
+    } else if (data.cmd === 'read4') {
+      var addr = parseAddr(data.args[0])
+
+      var offset = parseInt(data.args[1]) || 0
+
+      var data = sc.read4(addr, offset)
+
+      socket.send(JSON.stringify({
+        type: 'rread4',
+        response: data
       }))
     }
 	}

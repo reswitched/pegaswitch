@@ -46,11 +46,23 @@ const fns = {
   },
   malloc: {
     response: 'mallocd'
+  },
+  write4: {
+    response: 'wrote4',
+    wait: false
+  },
+  read4: {
+    response: 'rread4'
   }
 }
 
+let _ = null // last value reg
+
 function defaultHandler (fn, callback) {
   return function (response) {
+    if (response) {
+      _ = response
+    }
     return callback(null, response)
   }
 }
@@ -65,15 +77,28 @@ function handle (input, context, filename, callback) {
   let args = tmp.split(' ')
   let cmd = args.shift()
 
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '_') {
+      args[i] = _
+    }
+  }
+
   let fn = fns[cmd]
 
   if (!fn) {
     return callback(null, 'unknown cmd')
   }
 
-  ee.once(fn.response, fn.handler || defaultHandler(fn, callback))
+  var handle = fn.handler || defaultHandler(fn, callback)
+
+  ee.once(fn.response, handle)
 
   sendMsg(cmd, args)
+
+  if (fn.wait === false) {
+    ee.removeListener(fn.response, handle)
+    return callback()
+  }
 }
 
 const r = repl.start({
