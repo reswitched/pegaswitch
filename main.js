@@ -1025,34 +1025,6 @@ var int = 'int', bool = 'bool', char_p = 'char*', void_p = 'void*';
 
 var bridgedFns = {}
 
-<<<<<<< HEAD
-	//sc.gc();
-	//sc.gc();
-
-	log(paddr(sc.getSP()));
-
-	var dump_all_ram = false;
-
-	//log(sc.getservicehandle("appletAE"));
-
-	if (dump_all_ram) {
-		var addr = [0, 0];
-		var last = [0, 0];
-		while(true) {
-			var mi = sc.querymem(addr);
-			last = addr;
-			addr = add2(mi[0], mi[1]);
-			log(paddr(mi[0]) + ' - ' + paddr(addr) + '  ' + mi[2] + ' ' + mi[3]);
-			
-			if(mi[3] != 'NONE')
-				sc.memdump(mi[0], mi[1][0], 'memdumps/'+paddr(mi[0]) + ' - ' + paddr(addr) + ' - ' + mi[3] + '.bin');
-			
-			if(addr[1] < last[1]) {
-				log('End');
-				break;
-			}
-		}
-=======
 function handler (sc, socket) {
 	return function (event) {
 		var data = JSON.parse(event.data)
