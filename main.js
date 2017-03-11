@@ -753,6 +753,17 @@ sploitcore.prototype.querymem = function(addr, raw) {
 	return data;
 };
 
+sploitcore.prototype.getservicehandle = function(name) {
+	var handlePtr = this.malloc(0x4);
+	var smGetServiceHandle = this.bridge(0x3AD15C, int, void_p, char_p, int);
+	log('smGetServiceHandle("' + name + '")...');
+	var res = smGetServiceHandle(handlePtr, name, name.length);
+	var handle = this.read4(handlePtr);
+	this.free(handlePtr);
+	log('smGetServiceHandle("' + name + '") == 0x' + res[0].toString(16) + ', 0x' + handle.toString(16));
+	return [res, handle]
+}
+
 sploitcore.prototype.str2buf = function(str) {
 	var buf = this.malloc(str.length + 8);
 	// Shitty memcpy of the string into buffer
@@ -1020,6 +1031,8 @@ function main() {
 	log(paddr(sc.getSP()));
 
 	var dump_all_ram = false;
+
+	//log(sc.getservicehandle("appletAE"));
 
 	if (dump_all_ram) {
 		var addr = [0, 0];
