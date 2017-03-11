@@ -72,6 +72,7 @@ wss.on('connection', function (ws) {
   console.log('Got connection')
 
   bridgedFns.forEach(function (fn) {
+    if (!fn) return
     const args = fn.split(' ')
     ws.send(JSON.stringify({
       cmd: 'bridge',

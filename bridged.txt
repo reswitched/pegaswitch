@@ -1,2 +1,12 @@
 # <name> <addr> <return> <...args>
 strlen 0x43A6E8 int char*
+smGetServiceHandle 0x3AD15C int void_p char_p int
+fseek 0x438B18 null void_p int int
+ftell 0x438BE0 int void_p
+fopen 0x43DDB4 void_p char_p char_p
+fread 0x438A14 int void_p int int void_p
+fclose 0x4384D0 int void_p
+memcpy 0x44338C int void_p void_p int
+OpenDirectory 0x233894 int void_p char_p int
+ReadDirectory 0x2328B4 int void_p void_p void_p int
+CloseDirectory 0x232828 int void_p
