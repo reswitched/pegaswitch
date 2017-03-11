@@ -1029,12 +1029,12 @@ function handler (sc, socket) {
 	return function (event) {
 		var data = JSON.parse(event.data)
 
-		if (data.cmd === 'getSP') {
+		if (data.cmd === 'sp') {
 			log('running getSP()...')
 			var sp = sc.getSP()
 
 			socket.send(JSON.stringify({
-				type: 'sp',
+				type: 'gotsp',
 				response: paddr(sc.getSP())
 			}))
 		} else if (data.cmd === 'call') {

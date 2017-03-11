@@ -21,6 +21,14 @@ function sendMsg (cmd, args = []) {
   }))
 }
 
+const fns = {
+  sp: 'gotsp',
+  bridge: 'bridged',
+  bridges: 'bridges',
+  call: 'call',
+  gc: 'gcran'
+}
+
 function handle (input, context, filename, callback) {
   let tmp = input.replace(/\n$/, '')
 
@@ -31,32 +39,17 @@ function handle (input, context, filename, callback) {
   let args = tmp.split(' ')
   let cmd = args.shift()
 
-  if (cmd === 'sp') {
-    ee.once('sp', function (sp) {
-      return callback(null, sp)
-    })
-    sendMsg('getSP')
-  } else if (cmd === 'bridge') {
-    ee.once('bridged', function () {
-      return callback(null, 'created')
-    })
-    sendMsg('bridge', args)
-  } else if (cmd === 'bridges' || cmd === 'bridged') {
-    ee.once('bridges', function (bridges) {
-      return callback(null, bridges)
-    })
-    sendMsg('bridges')
-  } else if(cmd === 'call') {
-    ee.once('call', function (addr) {
-      return callback(null, addr)
-    })
-    sendMsg('call', args)
-  } else if (cmd === 'gc') {
-    ee.once('gcran', callback)
-    sendMsg('gc')
-  } else {
+  let returnFn = fns[cmd]
+
+  if (!returnFn) {
     return callback(null, 'unknown cmd')
   }
+
+  ee.once(returnFn, function (response) {
+    return callback(null, response)
+  })
+
+  sendMsg(cmd, args)
 }
 
 const r = repl.start({
