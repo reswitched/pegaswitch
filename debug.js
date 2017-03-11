@@ -51,8 +51,18 @@ const fns = {
     response: 'wrote4',
     wait: false
   },
+  write8: {
+    response: 'wrote8',
+    wait: false
+  },
   read4: {
-    response: 'rread4'
+    response: 'rread'
+  },
+  read8: {
+    response: 'rread'
+  },
+  readstring: {
+    response: 'rreadstring'
   }
 }
 
@@ -76,6 +86,10 @@ function handle (input, context, filename, callback) {
 
   let args = tmp.split(' ')
   let cmd = args.shift()
+
+  if (cmd === '_') {
+    return callback(null, _)
+  }
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '_') {

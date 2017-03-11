@@ -1035,6 +1035,27 @@ sploitcore.prototype.gc = function() {
 	dlog('GC should be solid');
 };
 
+sploitcore.prototype.readstring = function (addr, length) {
+  if (!length) {
+    length = 4
+  }
+
+  var out = ''
+
+  var reads = Math.ceil(length / 4)
+
+  for (var i = 0; i < reads; i++) {
+    var d = this.read4(addr, i).toString().match(/.{2}/g)
+    if (!d) continue
+    d.forEach(function (char) {
+      if (out.length > length) return
+      out += String.fromCharCode(char)
+    })
+  }
+
+  return out
+}
+
 var int = 'int', bool = 'bool', char_p = 'char*', void_p = 'void*';
 
 var bridgedFns = {}
@@ -1102,22 +1123,30 @@ function handler (sc, socket) {
         type: 'mallocd',
         response: paddr(addr)
       }))
-    } else if (data.cmd === 'write4') {
+    } else if (data.cmd === 'write4' || data.cmd === 'write8') {
       log(JSON.stringify(data))
       var addr = parseAddr(data.args[0])
       var value = parseInt(data.args[1])
+      var offset = parseInt(data.args[2]) || 0
 
-      sc.write4(value, addr)
-    } else if (data.cmd === 'read4') {
+      sc[data.cmd](value, addr, offset)
+    } else if (data.cmd === 'read4' || data.cmd === 'read8') {
       var addr = parseAddr(data.args[0])
-
       var offset = parseInt(data.args[1]) || 0
 
-      var data = sc.read4(addr, offset)
+      var response = sc[data.cmd](addr, offset)
 
       socket.send(JSON.stringify({
-        type: 'rread4',
-        response: data
+        type: 'rread',
+        response: response
+      }))
+    } else if (data.cmd === 'readstring') {
+      var addr = parseAddr(data.args[0])
+      var length = parseInt(data.args[1]) || 0
+
+      socket.send(JSON.stringify({
+        type: 'rreadstring',
+        response: sc.readstring(addr, length)
       }))
     }
 	}
