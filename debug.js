@@ -68,9 +68,9 @@ const fns = {
 
 let _ = null // last value reg
 
-function defaultHandler (fn, callback) {
+function defaultHandler (saveVal, callback) {
   return function (response) {
-    if (response) {
+    if (saveVal) {
       _ = response
     }
     return callback(null, response)
@@ -84,11 +84,18 @@ function handle (input, context, filename, callback) {
     return callback()
   }
 
+  let saveVal = false
+
   let args = tmp.split(' ')
   let cmd = args.shift()
 
   if (cmd === '_') {
     return callback(null, _)
+  } else if (cmd === '$') {
+    // if prefixed with $ we
+    // save the response to _
+    saveVal = true
+    cmd = args.shift()
   }
 
   for (let i = 0; i < args.length; i++) {
@@ -103,7 +110,7 @@ function handle (input, context, filename, callback) {
     return callback(null, 'unknown cmd')
   }
 
-  var handle = fn.handler || defaultHandler(fn, callback)
+  var handle = fn.handler || defaultHandler(saveVal, callback)
 
   ee.once(fn.response, handle)
 
