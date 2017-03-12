@@ -104,6 +104,11 @@ const fns = {
     maxArgs: 2,
     help: 'readstring <addr> <bytes=4>',
     helptxt: 'Reads data at address and prints as string'
+  },
+  eval: {
+    response: 'evald',
+    help: 'eval <...code>',
+    helptxt: 'Evals code on remote console and returns response if applicable'
   }
 }
 

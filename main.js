@@ -1153,6 +1153,15 @@ function handler (sc, socket) {
         type: 'rreadstring',
         response: sc.readstring(addr, length)
       }))
+    } else if (data.cmd === 'eval') {
+      var code = data.args.join(' ')
+      if (!window.evalout) window.evalout = {}
+      var num = Math.floor(Math.random()*1000000)
+      eval('window.evalout[' + num + '] = ' + code)
+      socket.send(JSON.stringify({
+        type: 'evald',
+        response: window.evalout[num] || 'no output'
+      }))
     }
 	}
 }
