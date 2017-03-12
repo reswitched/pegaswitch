@@ -6,9 +6,12 @@ const fs = require('fs')
 const path = require('path')
 
 const WebSocket = require('ws')
+const History = require('repl.history')
 
 const ee = new events.EventEmitter()
 const wss = new WebSocket.Server({ port: 81 })
+
+const historyPath = path.resolve(__dirname, '.shell_history')
 
 const bridgedFns = fs.readFileSync(path.resolve(__dirname, 'bridged.txt')).toString().split('\n').map(x => x.replace('\r', '')).splice(1)
 
@@ -189,6 +192,8 @@ const r = repl.start({
   prompt: '',
   eval: handle
 })
+
+History(r, historyPath)
 
 r.pause()
 r.setPrompt('switch> ')

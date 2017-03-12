@@ -2,3 +2,4 @@ files
 memdump.json
 .DS_Store
 node_modules
+.shell_history
