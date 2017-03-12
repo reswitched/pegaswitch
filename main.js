@@ -568,7 +568,7 @@ sploitcore.prototype.call = function(funcptr, args, fargs, registers, dump_regs)
 
 		if(fargs.length > 0) {
 			for(var i = 0; i < fargs.length && i < 32; i++) {
-				this.write8(fargs[i], sp, (0x110 + 8 * i) >> 2);
+				this.write8(fargs[i], loadarea, (0x110 + 8 * i) >> 2);
 			}
 		}
 
@@ -998,7 +998,7 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 				nfargs.push(fv);
 		}
 
-		var retval = self.call(ptr, nargs);
+		var retval = self.call(ptr, nargs, nfargs);
 
 		for(var i = 0; i < args.length; ++i) {
 			var na = nargs[i], type = args[i];
