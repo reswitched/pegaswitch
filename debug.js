@@ -84,7 +84,7 @@ const fns = {
   }
 }
 
-let _ = null // last value reg
+let _ = undefined // last value reg
 
 function defaultHandler (saveVal, callback) {
   return function (response) {
@@ -118,6 +118,9 @@ function handle (input, context, filename, callback) {
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '_') {
+      if (_ === undefined) {
+        return callback(null, '_ has no value')
+      }
       args[i] = _
     }
   }
