@@ -1,22 +1,28 @@
-<style>
-.smallButton {
-  width: 50px;
-  height: 50px;
-}
+<!doctype html>
+<html>
+  <head>
+    <style>
+    .smallButton {
+      width: 50px;
+      height: 50px;
+    }
 
-.largeButton {
-	width: 400px;
-	height: 200px;
-}
-pre {
-	font-size: 200%;
-}
-.address {
-  width: 50%;
-  margin-bottom: 3%;
-}
-</style>
+    .largeButton {
+    	width: 400px;
+    	height: 200px;
+    }
+    pre {
+    	font-size: 200%;
+    }
+    .address {
+      width: 50%;
+      margin-bottom: 3%;
+    }
+    </style>
+  </head>
+  <body>
+    <button class='largeButton' onclick="location.reload()">Reload</button> <button id="test" class='largeButton' onclick="main();">Test</button><br><br>
 
-<button id="foo" class='largeButton' onclick="location.reload()">Reload</button> <button class='largeButton' onclick="main();">Test</button><br><br>
-
-<script src="main.js"></script>
+    <script src="main.js"></script>
+  </body>
+</html>

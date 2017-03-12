@@ -1243,3 +1243,7 @@ function main() {
 
   setupListener(sc)
 }
+
+setTimeout(function() {
+	document.getElementById('test').click();
+}, 100);
