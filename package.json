@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/daeken/Pegaswitch#readme",
   "dependencies": {
+    "colors": "^1.1.2",
     "ws": "^2.2.0"
   }
 }

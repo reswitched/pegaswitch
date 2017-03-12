@@ -1,3 +1,5 @@
+require('colors')
+
 const repl = require('repl')
 const events = require('events')
 const fs = require('fs')
@@ -27,61 +29,84 @@ ee.on('error', function (message) {
 
 const fns = {
   sp: {
-    response: 'gotsp'
+    response: 'gotsp',
+    helptxt: 'Return SP'
   },
   bridge: {
     response: 'bridged',
     minArgs: 3,
-    help: 'bridge <name> <addr> <retval> <...args>'
+    help: 'bridge <name> <addr> <retval> <...args>',
+    helptxt: 'Bridges native function to name you can call'
   },
   bridges: {
-    response: 'bridges'
+    response: 'bridges',
+    helptxt: 'Lists bridged native functions'
   },
   call: {
     response: 'call',
     minArgs: 1,
-    help: 'call <name> <...args>'
+    help: 'call <name> <...args>',
+    helptxt: 'Call a bridged native function'
   },
   gc: {
-    response: 'gcran'
+    response: 'gcran',
+    helptxt: 'Forcefully run GC'
   },
   malloc: {
     response: 'mallocd',
     args: 1,
-    help: 'malloc <bytes>'
+    help: 'malloc <bytes>',
+    helptxt: 'Allocates space at returned address'
   },
   write4: {
     response: 'wrote4',
     wait: false,
     minArgs: 2,
     maxArgs: 3,
-    help: 'write4 <addr> <data> <offset=0>'
+    help: 'write4 <addr> <data> <offset=0>',
+    helptxt: 'Writes 4 bytes of data to address'
   },
   write8: {
     response: 'wrote8',
     wait: false,
     minArgs: 2,
     maxArgs: 3,
-    help: 'write8 <addr> <data> <offset=0>'
+    help: 'write8 <addr> <data> <offset=0>',
+    helptxt: 'Writes 8 bytes of data to address'
   },
   read4: {
     response: 'rread',
     minArgs: 1,
     maxArgs: 2,
-    help: 'read4 <addr> <offset=0>'
+    help: 'read4 <addr> <offset=0>',
+    helptxt: 'Reads 4 bytes of data from address'
   },
   read8: {
     response: 'rread',
     minArgs: 1,
     maxArgs: 2,
-    help: 'read8 <addr> <offset=0>'
+    help: 'read8 <addr> <offset=0>',
+    helptxt: 'Reads 8 bytes of data from address'
   },
   readstring: {
     response: 'rreadstring',
     minArgs: 1,
     maxArgs: 2,
-    help: 'readstring <addr> <bytes=4>'
+    help: 'readstring <addr> <bytes=4>',
+    helptxt: 'Reads data at address and prints as string'
   }
+}
+
+function showHelp (callback) {
+  for(let k in fns) {
+    let out = `${k.bold}: ${fns[k].helptxt}`
+    if (fns[k].help) {
+      out += ` (${fns[k].help})`.dim
+    }
+    console.log(out)
+  }
+  console.log()
+  return callback()
 }
 
 let _ = undefined // last value reg
@@ -109,6 +134,8 @@ function handle (input, context, filename, callback) {
 
   if (cmd === '_') {
     return callback(null, _)
+  } else if (cmd === 'help') {
+    return showHelp(callback)
   } else if (cmd === '$') {
     // if prefixed with $ we
     // save the response to _
