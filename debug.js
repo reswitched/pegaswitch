@@ -109,6 +109,20 @@ const fns = {
     response: 'evald',
     help: 'eval <...code>',
     helptxt: 'Evals code on remote console and returns response if applicable'
+  },
+  evalfile: {
+    response: 'evald',
+    help: 'evalfile <filename>',
+    helptxt: 'Evals code read from file',
+    setup: function (args, callback) {
+      try {
+        var filepath = path.resolve(__dirname, args[0])
+        fs.statSync(filepath)
+        return fs.readFileSync(filepath).toString().split('\n')
+      } catch (e) {
+        return callback(null, 'invalid file')
+      }
+    }
   }
 }
 
@@ -182,6 +196,13 @@ function handle (input, context, filename, callback) {
     fn.maxArgs !== undefined && args.length > fn.maxArgs
   ) {
     return callback(null, fn.help)
+  }
+
+  if (fn.setup) {
+    args = fn.setup(args, callback)
+    if (!args) {
+      return
+    }
   }
 
   var handle = fn.handler || defaultHandler(saveVal, callback)

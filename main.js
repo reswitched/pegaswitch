@@ -1153,14 +1153,18 @@ function handler (sc, socket) {
         type: 'rreadstring',
         response: sc.readstring(addr, length)
       }))
-    } else if (data.cmd === 'eval') {
+    } else if (data.cmd === 'eval' || data.cmd === 'evalfile') {
       var code = data.args.join(' ')
-      if (!window.evalout) window.evalout = {}
-      var num = Math.floor(Math.random()*1000000)
-      eval('window.evalout[' + num + '] = ' + code)
+      if (!~code.indexOf('window.response')) {
+        if (code.substr(0, 4) !== 'var ') {
+          code = 'window.response = ' + code
+        }
+      }
+      window.response = null
+      eval('with (sc) { ' + code + '}')
       socket.send(JSON.stringify({
         type: 'evald',
-        response: window.evalout[num] || 'no output'
+        response: window.response || 'no output'
       }))
     }
 	}
