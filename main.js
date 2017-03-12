@@ -1125,6 +1125,9 @@ function handler (sc, socket) {
         type: 'mallocd',
         response: paddr(addr)
       }))
+    } else if (data.cmd === 'free') {
+      var addr = parseAddr(data.args[0])
+      sc.free(addr)
     } else if (data.cmd === 'write4' || data.cmd === 'write8') {
       log(JSON.stringify(data))
       var addr = parseAddr(data.args[0])

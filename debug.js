@@ -58,6 +58,13 @@ const fns = {
     help: 'malloc <bytes>',
     helptxt: 'Allocates space at returned address'
   },
+  free: {
+    response: 'freed',
+    wait: false,
+    args: 1,
+    help: 'free <address>',
+    helptxt: 'Frees memory at address allocated by malloc'
+  },
   write4: {
     response: 'wrote4',
     wait: false,
