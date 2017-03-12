@@ -85,7 +85,7 @@ var sploitcore = function() {
 	for(var i = 0; i < this.tu.length; ++i)
 		this.tu[i] = 0x41424344;
 
-	var numbufs = 1000000;
+	var numbufs = 2000000;
 	this.bufs = new Array(numbufs);
 
 	this.allocated = {};
@@ -133,6 +133,8 @@ var sploitcore = function() {
 
 	this.mainaddr = this.walkList();
 	dlog('Main address ' + paddr(this.mainaddr));
+
+	log('~~success');
 };
 
 
