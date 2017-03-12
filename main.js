@@ -454,20 +454,20 @@ sploitcore.prototype.free = function(addr) {
 	this.allocated[addr] = 0;
 };
 
-sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
+sploitcore.prototype.call = function(funcptr, args, fargs, registers, dump_regs) {
     if (typeof(funcptr) == 'number') {
         funcptr = add2(this.mainaddr, funcptr);
     }
-    if (arguments.length == 3) {
-        dump_regs = false;
-    } else if (arguments.length == 2) {
-        dump_regs = false;
-        registers = [];
-    } else if (arguments.length == 1) {
-        dump_regs = false;
-        registers = [];
-        args = [];
-    } 
+    switch(arguments.length) {
+				case 1:
+					args = [];
+				case 2:
+					fargs = [];
+				case 3:
+					registers = [];
+				case 4:
+					dump_regs = false;
+    }
     var sp = this.getSP();
 
     dlog('Starting holy rop');
@@ -572,6 +572,12 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
     if (args.length > 0) {
         for (var i = 0; i < args.length && i < 8; i++) {
             this.write8(args[i], sp, (0x80 + 8 * i) >> 2)
+        }
+    }
+
+    if (fargs.length > 0) {
+        for (var i = 0; i < fargs.length && i < 32; i++) {
+            this.write8(fargs[i], sp, (0x110 + 8 * i) >> 2);
         }
     }
 
@@ -960,62 +966,77 @@ sploitcore.prototype.dirlist = function(dirPath) {
 	this.free(sDirInfo);
 }
 
+var int = 'int', float = 'float', bool = 'bool', char_p = 'char*', void_p = 'void*';
 sploitcore.prototype.bridge = function(ptr, rettype) {
-	if(typeof(ptr) == 'number')
-		ptr = add2(this.mainaddr, ptr);
-	var self = this;
-	var args = Array.prototype.slice.call(arguments, [2]);
+  if(typeof(ptr) == 'number')
+    ptr = add2(this.mainaddr, ptr);
+  var self = this;
+  var args = Array.prototype.slice.call(arguments, [2]);
 
-	var sub = function() {
-		if(arguments.length != args.length)
-			throw 'Mismatched argument counts';
+  var sub = function() {
+    if(arguments.length != args.length)
+      throw 'Mismatched argument counts';
 
-		var nargs = [];
-		for(var i = 0; i < args.length; ++i) {
-			var inp = arguments[i], type = args[i], v;
-			switch(type) {
-				case int: case void_p:
-					if(typeof(inp) == 'number')
-						v = [inp, 0];
-					else
-						v = inp;
-					break;
-				case bool:
-					v = [~~inp, 0];
-					break;
-				case char_p:
-					inp = Array.prototype.map.call(inp, function(x) { return x.charCodeAt(0); });
-					var len = inp.length + 1;
-					if(len % 4 != 0)
-						len += 4 - (len % 4);
-					v = self.malloc(len);
-					for(var j = 0; j < len; j += 4) {
-						var a = inp.length > j+0 ? inp[j+0] : 0, b = inp.length > j+1 ? inp[j+1] : 0;
-						var c = inp.length > j+2 ? inp[j+2] : 0, d = inp.length > j+3 ? inp[j+3] : 0;
-						self.write4((d << 24) | (c << 16) | (b << 8) | a, v, j >> 2);
-					}
-					break;
-			}
-			nargs.push(v);
-		}
+    var nargs = [], nfargs = [];
+    for(var i = 0; i < args.length; ++i) {
+      var inp = arguments[i], type = args[i], v = null, fv = null;
+      switch(type) {
+        case int: case void_p:
+          if(typeof(inp) == 'number')
+            v = [inp, 0];
+          else
+            v = inp;
+          break;
+        case float:
+          var bbuf = new ArrayBuffer(8);
+          (new Float64Array(bbuf))[0] = inp;
+          fv = (new Uint32Array(bbuf))[0];
+          break;
+        case bool:
+          v = [~~inp, 0];
+          break;
+        case char_p:
+          if(typeof(inp) == 'number')
+            v = [inp, 0];
+          else if(typeof(inp) != 'string')
+            v = inp;
+          else {
+            inp = Array.prototype.map.call(inp, function(x) { return x.charCodeAt(0); });
+            var len = inp.length + 1;
+            if(len % 4 != 0)
+              len += 4 - (len % 4);
+            v = self.malloc(len);
+            for(var j = 0; j < len; j += 4) {
+              var a = inp.length > j+0 ? inp[j+0] : 0, b = inp.length > j+1 ? inp[j+1] : 0;
+              var c = inp.length > j+2 ? inp[j+2] : 0, d = inp.length > j+3 ? inp[j+3] : 0;
+              self.write4((d << 24) | (c << 16) | (b << 8) | a, v, j >> 2);
+            }
+          }
+          break;
+      }
+      if(v != null)
+        nargs.push(v);
+      else
+        nfargs.push(fv);
+    }
 
-		var retval = self.call(ptr, nargs);
+    var retval = self.call(ptr, nargs);
 
-		for(var i = 0; i < args.length; ++i) {
-			var na = nargs[i], type = args[i];
-			switch(type) {
-				case char_p:
-					self.free(na);
-					break;
-			}
-		}
+    for(var i = 0; i < args.length; ++i) {
+      var na = nargs[i], type = args[i];
+      switch(type) {
+        case char_p:
+          self.free(na);
+          break;
+      }
+    }
 
-		return retval; // XXX: Do type processing
-	};
+    return retval; // XXX: Do type processing
+  };
 
-	sub.addr = ptr;
+  sub.addr = ptr;
 
-	return sub;
+  return sub;
 };
 
 sploitcore.prototype.gc = function() {
@@ -1057,8 +1078,6 @@ sploitcore.prototype.readstring = function (addr, length) {
 
   return out
 }
-
-var int = 'int', bool = 'bool', char_p = 'char*', void_p = 'void*';
 
 var bridgedFns = {}
 
