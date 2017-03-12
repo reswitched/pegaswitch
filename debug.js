@@ -8,7 +8,7 @@ const WebSocket = require('ws')
 const ee = new events.EventEmitter()
 const wss = new WebSocket.Server({ port: 81 })
 
-const bridgedFns = fs.readFileSync(path.resolve(__dirname, 'bridged.txt')).toString().split('\n').splice(1)
+const bridgedFns = fs.readFileSync(path.resolve(__dirname, 'bridged.txt')).toString().split('\n').map(x => x.replace('\r', '')).splice(1)
 
 console.log('Waiting for connection..')
 
