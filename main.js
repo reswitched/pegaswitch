@@ -496,7 +496,7 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
 
     var savegadg = this.mref(0x4336B0);
     var loadgadg = this.mref(0x433620);
-    var loadgadg_stage2 = this.mref(0x3A8688);
+    var loadgadg_stage2 = this.mref(0x3A869C);
 
     var load_x19 = this.mref(0x6C3E4);
     var str_x20 = this.mref(0x117330);
@@ -545,7 +545,9 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
 
     this.write8(sp, loadarea, 0xF8 >> 2); // Can write an arbitrary stack ptr here, for argument passing
     this.write8(loadgadg_stage2, loadarea, 0x100 >> 2); // Return from load to load-stage2
-    this.write8(funcptr, loadarea, 0x00 >> 2); 
+    this.write8(funcptr, loadarea, 0x80 >> 2); 
+
+    sp = add2(sp, -0x80);
 
     // Write registers for native code.
     if (registers.length > 9) {
@@ -553,8 +555,6 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
             this.write8(registers[i], loadarea, (8 * i) >> 2);
         }
     }
-
-    // TODO: Loading in Q0-Q7 from SP[0:0x80] here, if we want it.
 
     if (registers.length > 0) {
         for (var i = 0; i <= 8 && i < registers.length; i++) {
@@ -619,7 +619,7 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
     this.write8(add2(str_x20, 0x4), sp, (0x240 + 0x28) >> 2);          // Load LR with LD X19, X20, X30
     this.write8(add2(savearea, 0xF8), sp, (0x270 + 0x0) >> 2);         // Load X20 with savearea + 0xF8 (saved SP)
     this.write8(add2(dumparea, 0x398), sp, (0x270 + 0x8) >> 2);        // Load X19 with dumparea + 0x398
-    this.write8(add2(sp, 0x8000), dumparea, 0x398 >> 2);               // Write SP to dumparea + 0x38
+    this.write8(add2(sp, 0x8080), dumparea, 0x398 >> 2);               // Write SP to dumparea + 0x38
     this.write8(load_and_str_x8, sp, (0x270 + 0x18) >> 2);             // Load X30 with LD, STR X8
     this.write8(add2(savearea, 0x100), sp, (0x290 + 0x0) >> 2);        // Load X20 with savearea + 0x100 (saved LR)
     this.write8(add2(dumparea, 0x3A0), sp, (0x290 + 0x8) >> 2);        // Load X19 with dumparea + 0x3A0
@@ -633,7 +633,7 @@ sploitcore.prototype.call = function(funcptr, args, registers, dump_regs) {
     this.write8(mov_x19_into_x0, sp, (0x2D0 + 0x18) >> 2);             // Load X30 with mov x0, x19.
     this.write8(loadgadg, sp, (0x2F0 + 0x18) >> 2);                    // Load X30 with context load
 
-    sp = add2(sp, 0x8000);
+    sp = add2(sp, 0x8080);
 
     dlog('Assigned.  Jumping.');
     this.func.apply(0x101);
@@ -1187,6 +1187,8 @@ function main() {
   //sc.gc();
 
   log(paddr(sc.getSP()));
+
+  log(sc.querymem(0));
 
   var dump_all_ram = false;
 
