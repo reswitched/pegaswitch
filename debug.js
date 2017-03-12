@@ -131,6 +131,9 @@ function defaultHandler (saveVal, callback) {
 }
 
 function handle (input, context, filename, callback) {
+  if (!connection) {
+    return console.log('Switch not connected...'.bold)
+  }
   let tmp = input.replace(/\n$/, '')
 
   if (!tmp) {
@@ -195,8 +198,7 @@ const r = repl.start({
 
 History(r, historyPath)
 
-r.pause()
-r.setPrompt('switch> ')
+r.setPrompt('')
 
 wss.on('connection', function (ws) {
   connection = ws
@@ -211,11 +213,13 @@ wss.on('connection', function (ws) {
     }))
   })
 
-  r.resume()
+  r.setPrompt('switch>')
   r.write('\n')
 
   ws.on('close', function () {
     console.log('\nSwitch disconnected...')
+    r.setPrompt('')
+    connection = null
     r.pause()
   })
 
