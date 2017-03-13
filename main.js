@@ -1,6 +1,6 @@
 var DEBUG = false;
 
-var socket
+var socket;
 
 function send(ep, data) {
 	data = JSON.stringify(data);
