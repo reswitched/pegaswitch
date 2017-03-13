@@ -1,0 +1,5 @@
+exports.int = 'int'
+exports.float = 'float'
+exports.bool = 'bool'
+exports.char_p = 'char*'
+exports.void_p = 'void*'

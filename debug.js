@@ -1,3 +1,8 @@
+if (process.env.NPM !== 'yes') {
+  console.error('Please start with `npm start`')
+  process.exit(1)
+}
+
 require('colors')
 
 const repl = require('repl')

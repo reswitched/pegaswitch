@@ -23,22 +23,12 @@ app.debug = True
 @app.route('/')
 @nocache
 def root():
-	return file('index.html').read()
+	return file('exploit/index.html').read()
 
-@app.route('/main.js')
+@app.route('/bundle.js')
 @nocache
-def main():
-	fake = str(random.randrange(1100000, 1600000))
-	rnd = ''
-	for i in xrange(random.randrange(100)):
-		rnd += 'for(var x = 0; x < %i; ++x) {\n' % random.randrange(10, 1000)
-		for j in xrange(random.randrange(10)):
-			if random.randrange(2) == 0:
-				rnd += '\tvar _%s = %i %s %i;\n' % (''.join(random.choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in xrange(random.randrange(3, 12))), random.randrange(-100000, 10000000), random.choice('+-/*'), random.randrange(-100000, 10000000))
-			else:
-				rnd += '\tvar _%s = new Uint32Array(%i);' % (''.join(random.choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in xrange(random.randrange(3, 12))), random.randrange(0, 1000))
-		rnd += '}\n'
-	return file('main.js').read().replace('FAKE', fake).replace('RND', rnd)
+def bundle():
+	return file('exploit/bundle.js').read()
 
 failures = successes = 0
 
