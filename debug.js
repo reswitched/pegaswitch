@@ -1,8 +1,3 @@
-if (process.env.NPM !== 'yes') {
-  console.error('Please start with `npm start`')
-  process.exit(1)
-}
-
 require('colors')
 
 const repl = require('repl')
@@ -14,11 +9,18 @@ const WebSocket = require('ws')
 const History = require('repl.history')
 
 const ee = new events.EventEmitter()
-const wss = new WebSocket.Server({ port: 81 })
+const wss = new WebSocket.Server({ port: 8100 })
 
 const historyPath = path.resolve(__dirname, '.shell_history')
 
 const bridgedFns = fs.readFileSync(path.resolve(__dirname, 'bridged.txt')).toString().split('\n').map(x => x.replace('\r', '')).splice(1)
+
+try {
+  fs.statSync(path.resolve(__dirname, 'exploit/bundle.js'))
+} catch (e) {
+  console.error('Please run `npm start` in another window and rerun this script')
+  process.exit(1)
+}
 
 console.log('Waiting for connection..')
 
