@@ -766,7 +766,7 @@ sploitcore.prototype.svc = function(id, registers, dump_regs) {
 		log('Failed to call svc 0x' + id.toString(16) + '.');
 	}
 
-	return this.call(svc_list[id], [], registers, dump_regs);
+	return this.call(svc_list[id], [], [], registers, dump_regs);
 }
 
 sploitcore.prototype.queryMem = function(addr, raw) {
@@ -1041,6 +1041,8 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 	};
 
 	sub.addr = ptr;
+	sub.args = args;
+	sub.rettype = rettype;
 
 	return sub;
 };
@@ -1126,7 +1128,6 @@ function handler(sc, socket) {
 			data.args[0] = parseInt(data.args[0]);
 
 			var fn = sc.bridge.apply(sc, data.args);
-			fn.rettype = data.args[1];
 
 			log('saved fn as ' + name);
 

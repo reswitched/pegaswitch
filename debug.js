@@ -239,7 +239,7 @@ wss.on('connection', function (ws) {
     }))
   })
 
-  r.setPrompt('switch>')
+  r.setPrompt('switch> ')
   r.write('\n')
 
   ws.on('close', function () {
