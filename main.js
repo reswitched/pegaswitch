@@ -75,9 +75,6 @@ function add2(addr, off) {
 
 	return [nlo, nhi];
 }
-function offset32(addr, off) {
-	return add(addr, off * 4);
-}
 
 var sploitcore = function() {
 	this.rwbuf = new ArrayBuffer(0x1003 * 4);
