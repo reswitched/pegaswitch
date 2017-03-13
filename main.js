@@ -768,7 +768,7 @@ sploitcore.prototype.svc = function(id, registers, dump_regs) {
 
 sploitcore.prototype.getTLS = function() {
 	return this.call(0x3ACE54, []);
-}
+};
 
 sploitcore.prototype.queryMem = function(addr, raw) {
 	if(arguments.length == 1)
