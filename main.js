@@ -452,8 +452,8 @@ sploitcore.prototype.getSP = function() {
 };
 
 sploitcore.prototype.malloc = function(bytes) {
-	var obj = new Uint32Array(bytes >> 2);
-	var addr = this.read8(this.getAddr(obj), 4);
+	var obj = new ArrayBuffer(bytes);
+	var addr = this.read8(this.read8(this.getAddr(obj), 4), 6);
 	this.allocated[addr] = obj;
 	return addr;
 };
@@ -753,7 +753,7 @@ sploitcore.prototype.svc = function(id, registers, dump_regs) {
 	return this.call(svc_list[id], [], registers, dump_regs);
 }
 
-sploitcore.prototype.querymem = function(addr, raw) {
+sploitcore.prototype.queryMem = function(addr, raw) {
 	if(arguments.length == 1)
 		raw = false;
 	var meminfo = this.malloc(0x20);
@@ -781,7 +781,7 @@ sploitcore.prototype.querymem = function(addr, raw) {
 	return data;
 };
 
-sploitcore.prototype.getservicehandle = function(name) {
+sploitcore.prototype.getServiceHandle = function(name) {
 	var handlePtr = this.malloc(0x4);
 	var smGetServiceHandle = this.bridge(0x3AD15C, int, void_p, char_p, int);
 	log('smGetServiceHandle("' + name + '")...');
@@ -792,21 +792,17 @@ sploitcore.prototype.getservicehandle = function(name) {
 	return [res, handle]
 }
 
-sploitcore.prototype.str2buf = function(str) {
-	var buf = this.malloc(str.length + 8);
-	// Shitty memcpy of the string into buffer
-	for(var i = 0; i < 0x100 && i < str.length; i += 4) {
-		var val = 0;
-		for(var j = 0; j < 4 && i + j < str.length; j++) {
-			val |= (str.charCodeAt(i+j) & 0xFF) << (8 * j);
-		}
-		this.write4(val, buf, i >> 2);
-	}
-	if(str.length % 4 == 0) {
-		this.write4(0, buf, str.length >> 2);
-	}
+sploitcore.prototype.str2buf = function(inp) {
+	var len = inp.length + 1;
+	var v = this.malloc(len);
+	this.memview(v, len, function(view) {
+		var u8b = new Uint8Array(view);
+		for(var j = 0; j < len; ++j)
+			u8b[j] = inp.charCodeAt(j);
+		u8b[inp.length] = 0;
+	});
 
-	return buf;
+	return v;
 };
 
 sploitcore.prototype.getFileSize = function(fhandle) {
@@ -998,18 +994,8 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 						v = [inp, 0];
 					else if(typeof(inp) != 'string')
 						v = inp;
-					else {
-						var len = inp.length + 1;
-						if(len % 4 != 0)
-							len += 4 - (len % 4);
-						v = self.malloc(len);
-						self.memview(v, len, function(view) {
-							var u8b = new Uint8Array(view);
-							for(var j = 0; j < len; ++j)
-								u8b[j] = inp.charCodeAt(j);
-							u8b[inp.length] = 0;
-						});
-					}
+					else
+						v = self.str2buf(inp);
 					break;
 			}
 			if(v != null)
@@ -1022,13 +1008,7 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 
 		switch(rettype) {
 			case char_p:
-				retval = self.memview(retval, 0xFFFFFFFF, function(view) {
-					var out = '';
-					var u8b = new Uint8Array(view);
-					for(var i = 0; u8b[i] != 0; ++i)
-						out += String.fromCharCode(u8b[i]);
-					return out;
-				});
+				retval = self.readString(retval);
 				break;
 		}
 
@@ -1068,24 +1048,19 @@ sploitcore.prototype.gc = function() {
 	dlog('GC should be solid');
 };
 
-sploitcore.prototype.readstring = function(addr, length) {
-	if(!length) {
-		length = 4;
-	}
+sploitcore.prototype.readString = function(addr, length) {
+	if(arguments.length == 1)
+		length = -1;
 
-	var out = '';
-	var reads = Math.ceil(length / 4);
+	return this.memview(addr, 0xFFFFFFFF, function(view) {
+		var u8b = new Uint8Array(view);
+		var out = '';
 
-	for(var i = 0; i < reads; i++) {
-		var d = this.read4(addr, i).toString().match(/.{2}/g);
-		if(!d) continue;
-		d.forEach(function (char) {
-			if(out.length > length) return
-			out += String.fromCharCode(char);
-		});
-	}
+		for(var i = 0; (length == -1 && u8b[i] != 0) || (length != -1 && i < length); i++)
+			out += String.fromCharCode(u8b[i]);
 
-	return out;
+		return out;
+	});
 };
 
 var bridgedFns = {}
@@ -1182,7 +1157,7 @@ function handler(sc, socket) {
 
 			socket.send(JSON.stringify({
 				type: 'rreadstring',
-				response: sc.readstring(addr, length)
+				response: sc.readString(addr, length)
 			}));
 		} else if(data.cmd === 'eval' || data.cmd === 'evalfile') {
 			var code = data.args.join(' ');
@@ -1219,7 +1194,7 @@ function main() {
 		var addr = [0, 0];
 		var last = [0, 0];
 		while(true) {
-			var mi = sc.querymem(addr);
+			var mi = sc.queryMem(addr);
 			last = addr;
 			addr = add2(mi[0], mi[1]);
 			log(paddr(mi[0]) + ' - ' + paddr(addr) + '  ' + mi[2] + ' ' + mi[3]);
