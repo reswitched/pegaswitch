@@ -968,7 +968,8 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 				case float:
 					var bbuf = new ArrayBuffer(8);
 					(new Float64Array(bbuf))[0] = inp;
-					fv = (new Uint32Array(bbuf))[0];
+					var ubuf = new Uint32Array(bbuf);
+					fv = [ubuf[0], ubuf[1]];
 					break;
 				case bool:
 					v = [~~inp, 0];
