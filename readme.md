@@ -1,13 +1,36 @@
-Conventions
-===========
+Setup
+=====
 
-64-bit Values
--------------
+1. Install Node, Python 2.7, and Ruby
+2. Open ports UDP 53 and TCP 80 and 8081 on your firewall
+3. Run `npm install`, `pip2 install flask`, `gem install rubydns`
+4. Start the DNS server with `sudo ruby rdns.rb` (drop sudo for Windows)
+5. Start the web server with `sudo python serve.py`
+6. Start watchify with `npm start`
+7. Start the shell with `node debug.js`
+8. Point your Switch to the DNS server
+9. Go to the eShop or another area that will trigger the captive portal
+10. Watch the shell connect
+
+Shell
+=====
+
+The default way to work with PegaSwitch is via the shell.  Type `help` after the Switch connects to get a list of commands.
+
+To disable the shell (and just work with the API), comment out the following line in `exploit/main.js`:
+
+	setupListener(sc);
+
+API
+===
+
+Conventions
+-----------
 
 64-bit values (pointers, primarily) are represented using a JavaScript array containing `[lo, hi]`, where each is 32-bit.
 
 Utility Functions
-=================
+-----------------
 
 - `paddr(address)` -- Convert a 64-bit value into a hex string representation
 - `add2(a, b)` -- Adds two 64-bit values or adds a 64-bit value and a number
@@ -16,9 +39,9 @@ Utility Functions
 - `parseAddr(address)` -- Takes a hex string and parses into a 64-bit value
 
 SploitCore
-==========
+----------
 
-Sploitcore is the centerpoint of PegaSwitch, providing all of the core functionality and most of the important API.
+Sploitcore is the centerpoint of PegaSwitch, providing all of the core functionality and most of the important API.  These are all methods on the sploitcore object.
 
 - `dumpaddr(address, count)` -- Takes an address and a number of 32-bit values to log
 - `read4(address, offset)` -- Reads a 32-bit value from `address + offset * 4`
@@ -39,8 +62,7 @@ Sploitcore is the centerpoint of PegaSwitch, providing all of the core functiona
 - `readString(addr, length)` -- Reads a string from `addr`.  If length is not passed or -1, the string is expected to be null-terminated
 - `gc()` -- Force garbage collection
 
-Call
-----
+### Call
 
 `sploitcore.call` allows you to call native functions by address.  It takes the following parameters, with the first being required:
 
@@ -52,8 +74,7 @@ Call
 
 This function always returns the 64-bit value in x0.
 
-Bridge
-------
+### Bridge
 
 Bridge allows you to wrap a native function into a JavaScript function.  Example:
 
