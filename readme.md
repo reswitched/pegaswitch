@@ -2,7 +2,7 @@ Setup
 =====
 
 1. Install Node, Python 2.7, and Ruby
-2. Open ports UDP 53 and TCP 80 and 8081 on your firewall
+2. Open ports UDP 53 and TCP 80 and 8100 on your firewall
 3. Run `npm install`, `pip2 install flask`, `gem install rubydns`
 4. Start the DNS server with `sudo ruby rdns.rb $yourlocalIP` (drop sudo for Windows)
 5. Start the web server with `sudo python serve.py`
