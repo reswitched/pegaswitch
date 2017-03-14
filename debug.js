@@ -7,13 +7,16 @@ const path = require('path')
 
 const WebSocket = require('ws')
 const History = require('repl.history')
+const stringArgv = require('string-argv')
+
+const utils = require('./exploit/utils')
 
 const ee = new events.EventEmitter()
 const wss = new WebSocket.Server({ port: 8100 })
 
 const historyPath = path.resolve(__dirname, '.shell_history')
 
-const bridgedFns = fs.readFileSync(path.resolve(__dirname, 'bridged.txt')).toString().split('\n').map(x => x.replace('\r', '')).splice(1)
+const bridgedFns = fs.readFileSync(path.resolve(__dirname, 'bridged.txt')).toString().split('\n').map(x => x.replace('\r', '')).splice(1).filter(Boolean)
 
 try {
   fs.statSync(path.resolve(__dirname, 'exploit/bundle.js'))
@@ -25,6 +28,16 @@ try {
 console.log('Waiting for connection..')
 
 let connection
+
+let bridges = bridgedFns.reduce(function (obj, fn) {
+  var t = fn.split(' ')
+  obj[t.shift()] = {
+    addr: t.shift(),
+    return: t.shift(),
+    args: t
+  }
+  return obj
+}, {})
 
 function sendMsg (cmd, args = []) {
   connection.send(JSON.stringify({
@@ -46,7 +59,17 @@ const fns = {
     response: 'bridged',
     minArgs: 3,
     help: 'bridge <name> <addr> <retval> <...args>',
-    helptxt: 'Bridges native function to name you can call'
+    helptxt: 'Bridges native function to name you can call',
+    handler: function (args, callback) {
+      return function (response) {
+        bridges[args.shift()] = {
+          addr: args.shift(),
+          return: args.shift(),
+          args: args
+        }
+        return callback()
+      }
+    }
   },
   bridges: {
     response: 'bridges',
@@ -56,7 +79,46 @@ const fns = {
     response: 'call',
     minArgs: 1,
     help: 'call <name> <...args>',
-    helptxt: 'Call a bridged native function'
+    helptxt: 'Call a bridged native function',
+    setup: function (args, callback) {
+      let name = args.shift()
+      args = args.join(' ') // join em back together so we can parse properly
+      let fn = bridges[name]
+      if (!fn) {
+        return callback(null, 'unknown fn')
+      }
+      let parsed = stringArgv(args)
+      if (parsed.length !== fn.args.length) {
+        console.error('Invalid number of arguments, wanted: ' + fn.args.join(' ').bold)
+        return callback()
+      }
+      for (let i = 0; i < fn.args.length; i++) {
+        let type = fn.args[i]
+        switch (type) {
+          case 'int': {
+            parsed[i] = parseInt(parsed[i])
+            if (isNaN(parsed[i])) {
+              console.error('Invalid parameter at position', i, 'expected', 'int'.bold)
+              return callback()
+            }
+          }
+          case 'char*': {
+            // do nothing
+            break;
+          }
+          case 'void*': {
+            try {
+              parsed[i] = utils.parseAddr(parsed[i])
+            } catch (e) {
+              console.error('Invalid parameter at position', i, 'expected', 'addr'.bold)
+              return callback()
+            }
+          }
+        }
+      }
+      parsed.unshift(name)
+      return parsed
+    }
   },
   gc: {
     response: 'gcran',
@@ -212,7 +274,7 @@ function handle (input, context, filename, callback) {
     }
   }
 
-  var handle = fn.handler || defaultHandler(saveVal, callback)
+  var handle = fn.handler ? fn.handler(args, callback) : defaultHandler(saveVal, callback)
 
   ee.once(fn.response, handle)
 
