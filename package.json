@@ -20,6 +20,7 @@
   "dependencies": {
     "colors": "^1.1.2",
     "repl.history": "^0.1.4",
+    "reserved-words": "^0.1.1",
     "watchify": "^3.9.0",
     "ws": "^2.2.0"
   }
