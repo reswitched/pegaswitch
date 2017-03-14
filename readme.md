@@ -1,14 +1,14 @@
 Setup
 =====
 
-1. Install Node, Python 2.7, and Ruby
+1. Install Node, Python 2.7
 2. Open ports UDP 53 and TCP 80 and 8081 on your firewall
-3. Run `npm install`, `pip2 install flask`, `gem install rubydns`
-4. Start the DNS server with `sudo ruby rdns.rb $yourlocalIP` (drop sudo for Windows)
+3. Run `npm install`, `pip2 install flask`
+4. Start the DNS server with `sudo python dns.py` (drop sudo for Windows)
 5. Start the web server with `sudo python serve.py`
 6. Start watchify with `npm start`
 7. Start the shell with `node debug.js`
-8. Point your Switch to the DNS server
+8. Point your Switch to the DNS server(the computer you're running `dns.py` on)
 9. Go to the eShop or another area that will trigger the captive portal
 10. Watch the shell connect
 
