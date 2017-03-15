@@ -18,6 +18,7 @@ Shell
 The default way to work with PegaSwitch is via the shell.  Type `help` after the Switch connects to get a list of commands.
 
 ![shell help](https://i.imgur.com/qlfEhRJ.png)
+![shell output](https://pegaswitch.com/shell.png)
 
 To disable the shell (and just work with the API), comment out the following line in `exploit/main.js`:
 
