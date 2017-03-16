@@ -322,6 +322,10 @@ wss.on('connection', function (ws) {
     data = JSON.parse(data)
     const type = data.type
     const response = data.response
-    ee.emit(type, response)
+    if (type === "log") {
+      console.log.apply(console, response);
+    } else {
+      ee.emit(type, response)
+    }
   })
 })
