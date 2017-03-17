@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const os = require('os')
 
 const browserify = require('browserify')
 const watchify = require('watchify')
@@ -10,6 +11,11 @@ const bodyParser = require('body-parser')
 const mkdirp = require('mkdirp')
 const blessed = require('blessed')
 const contrib = require('blessed-contrib')
+
+if (os.platform() !== 'win32' && process.getuid() !== 0) {
+  console.error('Please run as root so we can bind to port 53 & 80')
+  process.exit()
+}
 
 // Setup our terminal
 let screen = blessed.screen({
@@ -84,9 +90,16 @@ function bundle() {
 }
 
 // Spin up our DNS server
-dnsd.createServer(function(req, res) {
+let dns = dnsd.createServer(function(req, res) {
   res.end(ip.address())
-}).listen(53, '0.0.0.0')
+})
+
+dns.on('error', function (err) {
+  console.log('There was an issue setting up DNS:', err.message)
+  process.exit()
+})
+
+dns.listen(53, '0.0.0.0')
 
 // Web server
 const app = express()
@@ -141,7 +154,12 @@ app.post('/filedump', function (req, res) {
   return res.sendStatus(200)
 })
 
-app.listen(80, '0.0.0.0')
+app.listen(80, '0.0.0.0', function (err) {
+  if (err) {
+    console.error('Could not bind to port 80')
+    process.exit(1)
+  }
+})
 
 // Render everything
 // screen.render()
