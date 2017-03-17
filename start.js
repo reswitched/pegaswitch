@@ -13,7 +13,7 @@ const blessed = require('blessed')
 const contrib = require('blessed-contrib')
 
 if (os.platform() !== 'win32' && process.getuid() !== 0) {
-  console.error('Please run as root so we can bind to port 53 & 80')
+  console.error('Please run as root so we can bind to port 54 & 80')
   process.exit()
 }
 
@@ -99,7 +99,7 @@ dns.on('error', function (err) {
   process.exit()
 })
 
-dns.listen(53, '0.0.0.0')
+dns.listen(54, '0.0.0.0')
 
 // Web server
 const app = express()
