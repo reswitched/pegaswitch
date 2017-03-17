@@ -8,10 +8,67 @@ const ip = require('ip')
 const express = require('express')
 const bodyParser = require('body-parser')
 const mkdirp = require('mkdirp')
+const blessed = require('blessed')
+const contrib = require('blessed-contrib')
 
+// Setup our terminal
+let screen = blessed.screen({
+  smartCSR: true
+})
+
+let log = contrib.log({
+  parent: screen,
+  fg: 'green',
+  selectedFg: 'green',
+  label: 'Debug Log',
+  border: 'line',
+  width: '30%',
+  height: '100%',
+  left: '70%',
+  style: {
+    fg: 'default',
+    bg: 'default',
+    focus: {
+      border: {
+        fg: 'green'
+      }
+    }
+  }
+})
+
+let repl = blessed.terminal({
+  parent: screen,
+  cursor: 'line',
+  cursorBlink: true,
+  screenKeys: false,
+  label: 'REPL',
+  left: 0,
+  top: 0,
+  width: '70%',
+  height: '100%',
+  border: 'line',
+  style: {
+    fg: 'default',
+    bg: 'default',
+    focus: {
+      border: {
+        fg: 'green'
+      }
+    }
+  },
+  shell: path.resolve(__dirname, 'repl.js')
+});
+
+repl.on('exit', function () {
+  process.exit()
+})
+
+screen.append(log)
+screen.append(repl)
+
+repl.focus()
 
 // Build our exploit bundle
-
 let b = browserify({
   entries: [ 'exploit/main.js'],
   cache: {},
@@ -50,20 +107,20 @@ app.post('/log', function (req, res) {
   let message = req.body.msg
 
   if (message === 'Loaded') {
-    console.log(`Success percentage: ${(successes / failures * 100).toFixed(2)} (${successes + failures} samples)`)
+    log.log(`Success percentage: ${(successes / failures * 100).toFixed(2)} (${successes + failures} samples)`)
   } else if (message === '~~failed') {
     failures++
   } else if (message === '~~success') {
     successes++
   } else {
-    console.log(`Log: ${message}`)
+    log.log(message)
   }
 
   return res.sendStatus(200)
 })
 
 app.post('/error', function (req, res) {
-  console.log(`ERR [${req.body.line}]: ${req.body.message}`)
+  log.log(`ERR [${req.body.line}]: ${req.body.message}`)
   return res.sendStatus(200)
 })
 
@@ -86,6 +143,5 @@ app.post('/filedump', function (req, res) {
 
 app.listen(80, '0.0.0.0')
 
-
-// Start our REPL
-require('./debug')
+// Render everything
+// screen.render()
