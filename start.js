@@ -102,6 +102,7 @@ dns.on('error', function (err) {
 try {
   dns.listen(53, '0.0.0.0')
 } catch(err) {
+  console.log('Could not listen on port 53! Maybe another process is using it?')
   console.log(err.message)
   process.exit()
 }
