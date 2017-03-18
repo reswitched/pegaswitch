@@ -96,16 +96,11 @@ let dns = dnsd.createServer(function(req, res) {
 
 dns.on('error', function (err) {
   console.log('There was an issue setting up DNS:', err.message)
+  console.log('Make sure that the port is open.')
   process.exit()
 })
 
-try {
-  dns.listen(53, '0.0.0.0')
-} catch(err) {
-  console.log('Could not listen on port 53! Maybe another process is using it?')
-  console.log(err.message)
-  process.exit()
-}
+dns.listen(53, '0.0.0.0')
 
 // Web server
 const app = express()
