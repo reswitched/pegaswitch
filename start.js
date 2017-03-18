@@ -99,7 +99,12 @@ dns.on('error', function (err) {
   process.exit()
 })
 
-dns.listen(53, '0.0.0.0')
+try {
+  dns.listen(53, '0.0.0.0')
+} catch(err) {
+  console.log(err.message)
+  process.exit()
+}
 
 // Web server
 const app = express()
