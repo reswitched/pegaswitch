@@ -28,6 +28,12 @@ try {
 
 console.log('Waiting for connection..')
 
+setTimeout(function() {
+  if(!connection) {
+    console.log('Connection is taking long... Make sure that the ports are open in your firewall and that no antivirus is denying the connection.');
+  }
+}, 15000);
+
 let connection
 
 let bridges = bridgedFns.reduce(function (obj, fn) {

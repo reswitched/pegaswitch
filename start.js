@@ -96,6 +96,7 @@ let dns = dnsd.createServer(function(req, res) {
 
 dns.on('error', function (err) {
   console.log('There was an issue setting up DNS:', err.message)
+  console.log('Make sure that the port is open.')
   process.exit()
 })
 
