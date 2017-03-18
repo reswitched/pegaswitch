@@ -99,7 +99,13 @@ dns.on('error', function (err) {
   process.exit()
 })
 
-dns.listen(53, '0.0.0.0')
+try {
+  dns.listen(53, '0.0.0.0')
+} catch(err) {
+  console.log('Could not listen on port 53! Maybe another process is using it?')
+  console.log(err.message)
+  process.exit()
+}
 
 // Web server
 const app = express()
