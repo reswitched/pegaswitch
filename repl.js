@@ -309,7 +309,6 @@ wss.on('connection', function (ws) {
     console.log('\nSwitch disconnected...')
     r.setPrompt('')
     connection = null
-    r.pause()
   })
 
   ws.on('message', function (data) {
