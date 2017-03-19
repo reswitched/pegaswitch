@@ -75,7 +75,7 @@ repl.focus()
 
 // Spin up our DNS server
 let dns = dnsd.createServer(function(req, res) {
-  res.end(ip.address())
+  res.end(process.argv[2] || ip.address())
 })
 
 dns.on('error', function (err) {
