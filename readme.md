@@ -90,3 +90,21 @@ The following are valid types:
 - `void_p` -- Arbitrary pointer
 - `char_p` -- String pointer
 - `float` -- Floating point argument; currently only supported for arguments, not returns
+
+Troubleshooting
+===============
+
+DNS responds with incorrect IP address
+--------------------------------------
+
+You can override the IP it responds with by passing an argument to `npm start`. eg `npm start 1.2.3.4`
+
+Buffer not found
+----------------
+
+Restart your browser. No? Hard reset your console by holding power button for 15s.
+
+Windows
+-------
+
+Windows is supported using WSL only. We will not provide support for native cmd.exe as it lacks necessary functionality.
