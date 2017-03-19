@@ -19,13 +19,6 @@ const historyPath = path.resolve(__dirname, '.shell_history')
 
 const bridgedFns = fs.readFileSync(path.resolve(__dirname, 'bridged.txt')).toString().split('\n').map(x => x.replace('\r', '')).splice(1).filter(Boolean)
 
-try {
-  fs.statSync(path.resolve(__dirname, 'exploit/bundle.js'))
-} catch (e) {
-  console.error('Please run `npm start` in another window and rerun this script')
-  process.exit(1)
-}
-
 console.log('Waiting for connection..')
 
 let connection

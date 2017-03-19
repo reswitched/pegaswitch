@@ -3,7 +3,6 @@ const path = require('path')
 const os = require('os')
 
 const browserify = require('browserify')
-const watchify = require('watchify')
 const dnsd = require('dnsd')
 const ip = require('ip')
 const express = require('express')
@@ -74,21 +73,6 @@ screen.append(repl)
 
 repl.focus()
 
-// Build our exploit bundle
-let b = browserify({
-  entries: [ 'exploit/main.js'],
-  cache: {},
-  packageCache: {},
-  plugin: [ watchify ]
-})
-
-b.on('update', bundle)
-bundle()
-
-function bundle() {
-  b.bundle().pipe(fs.createWriteStream('exploit/bundle.js'))
-}
-
 // Spin up our DNS server
 let dns = dnsd.createServer(function(req, res) {
   res.end(ip.address())
@@ -110,7 +94,11 @@ app.get('/', function (req, res) {
 })
 
 app.get('/bundle.js', function (req, res) {
-  res.end(fs.readFileSync(path.resolve(__dirname, 'exploit/bundle.js')))
+  let b = browserify({
+    entries: [ 'exploit/main.js'],
+    cache: {},
+    packageCache: {}
+  }).bundle().pipe(res)
 })
 
 let failures = 0
@@ -162,4 +150,4 @@ app.listen(80, '0.0.0.0', function (err) {
 })
 
 // Render everything
-// screen.render()
+screen.render()
