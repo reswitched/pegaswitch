@@ -93,7 +93,7 @@ app.post('/log', function (req, res) {
 })
 
 app.post('/error', function (req, res) {
-  logger.log(`ERR [${req.body.line}]: ${req.body.message}`)
+  logger.log(`ERR [${req.body.msg[0]}]: ${req.body.msg[1]}`)
   return res.sendStatus(200)
 })
 
