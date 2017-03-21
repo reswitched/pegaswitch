@@ -65,6 +65,10 @@ app.get('/', function (req, res) {
   res.end(fs.readFileSync(path.resolve(__dirname, 'exploit/index.html')))
 })
 
+app.get('/minmain.js', function (req, res) {
+  res.end(fs.readFileSync(path.resolve(__dirname, 'exploit/minmain.js')))
+})
+
 app.get('/bundle.js', function (req, res) {
   let b = browserify({
     entries: [ 'exploit/main.js'],
