@@ -83,8 +83,8 @@ let successes = 0
 app.post('/log', function (req, res) {
   let message = req.body.msg
 
-  if (message === 'Loaded') {
-    logger.log(`Success percentage: ${(successes / failures * 100).toFixed(2)} (${successes + failures} samples)`)
+  if (message === 'Loaded' && (successes != 0 || failures != 0)) {
+    logger.log(`Success percentage: ${(successes / (successes + failures) * 100).toFixed(2)} (${successes + failures} samples)`)
   } else if (message === '~~failed') {
     failures++
   } else if (message === '~~success') {
