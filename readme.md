@@ -4,7 +4,7 @@ Setup
 1. Install Node 7
 2. Open ports UDP 53 and TCP 80 and 8081 on your firewall
 3. Run `npm install`
-4. Start everything with `npm start`
+4. Start everything with `sudo node start.js` on Linux/OS X or `node start.js --disable-curses --logfile debug.log` on Windows
 5. Point your Switch to the DNS server
 6. Go to the eShop or another area that will trigger the captive portal
 7. Watch the shell connect
@@ -97,14 +97,11 @@ Troubleshooting
 DNS responds with incorrect IP address
 --------------------------------------
 
-You can override the IP it responds with by passing an argument to `npm start`. eg `npm start 1.2.3.4`
-
-Buffer not found
-----------------
-
-Restart your browser. No? Hard reset your console by holding power button for 15s.
+You can override the IP it responds with the `--ip` argument to `node start.js`. eg `sudo node start.js --ip 1.2.3.4`
 
 Windows
 -------
 
-Windows is supported using WSL only. We will not provide support for native cmd.exe as it lacks necessary functionality.
+The full curses interface on Windows is supported using WSL only. We will not provide support for native cmd.exe as it lacks necessary functionality.
+
+You can, however, use `--disable-curses` and write the debug log out to a file for reading.
