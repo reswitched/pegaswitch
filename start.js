@@ -22,10 +22,12 @@ let argv = yargs
   .describe('disable-curses', 'Disabled curses interface. Requires --logfile')
   .describe('disable-dns', 'Disables builtin DNS server.')
   .describe('ip', 'Override IP address DNS server responds with')
+  .describe('host', 'Override listen IP.')
   .describe('logfile', 'Writes debug log to file')
   .example('$0 --ip 1.2.4.8 --disable-curses --logfile debug.txt')
   .help('h')
   .nargs('ip', 1)
+  .nargs('host', 1)
   .nargs('logfile', 1)
   .alias('h', 'help')
   .argv
@@ -54,7 +56,7 @@ if (argv['disable-dns'] !== true) {
     process.exit()
   })
 
-  dns.listen(53, '0.0.0.0')
+  dns.listen(53, argv.host || '0.0.0.0')
 }
 
 // Web server
@@ -118,7 +120,7 @@ app.post('/filedump', function (req, res) {
   return res.sendStatus(200)
 })
 
-app.listen(80, '0.0.0.0', function (err) {
+app.listen(80, argv.host || '0.0.0.0', function (err) {
   if (err) {
     console.error('Could not bind to port 80')
     process.exit(1)
