@@ -2,21 +2,23 @@
   "name": "pegaswitch",
   "version": "1.0.0",
   "description": "",
-  "main": "debug.js",
+  "main": "start.js",
   "scripts": {
     "start": "node start.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docs:generate": "documentation build -f html -o docs ./exploit/**.js",
+    "docs:serve": "documentation serve ./exploit/**.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/daeken/Pegaswitch.git"
+    "url": "git+https://github.com/reswitched/Pegaswitch.git"
   },
-  "author": "Adam Brady <adam@boxxen.org>",
+  "author": "ReSwitched Team",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/daeken/Pegaswitch/issues"
+    "url": "https://github.com/reswitched/Pegaswitch/issues"
   },
-  "homepage": "https://github.com/daeken/Pegaswitch#readme",
+  "homepage": "https://github.com/reswitched/Pegaswitch#readme",
   "dependencies": {
     "blessed": "^0.1.81",
     "blessed-contrib": "^4.7.5",
@@ -24,15 +26,23 @@
     "browserify": "^14.1.0",
     "colors": "^1.1.2",
     "dnsd": "^0.9.6",
+    "exorcist": "^0.4.0",
     "express": "^4.15.2",
     "ip": "^1.1.5",
     "mkdirp": "^0.5.1",
     "pty.js": "^0.3.1",
     "repl.history": "^0.1.4",
     "reserved-words": "^0.1.1",
+    "source-map": "^0.5.6",
     "string-argv": "0.0.2",
     "term.js": "0.0.7",
     "ws": "^2.2.0",
     "yargs": "^7.0.2"
+  },
+  "devDependencies": {
+    "documentation": "^5.3.2",
+    "eslint": "^4.6.1",
+    "snazzy": "^7.0.0",
+    "standard": "^10.0.2"
   }
 }
