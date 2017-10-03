@@ -31,4 +31,4 @@ docker run --rm -it \
   -p 0.0.0.0:$DNS_PORT:53 \
   -p 0.0.0.0:$WEB_PORT:80 \
   -p 0.0.0.0:$OTHER_PORT:8100 \
-  node:8 /bin/bash -c 'if [ ! -d "node_modules" ]; then npm install; fi; node start.js'
+  node:8 /bin/bash -c 'if [ ! -d "node_modules" ]; then npm install; fi; node start.js $@'
