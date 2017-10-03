@@ -6,6 +6,11 @@ if [ $? -ne 0 ]; then
     echo "Docker must be installed to use this feature. Exiting..." >&2
 fi
 
+if [ "$(docker ps -aq -f name=pegaswitch)" ]; then
+    echo "Pegaswitch is already running..."
+    exit 1
+fi
+
 ROOT_DIR="$(dirname $(pwd))"
 
 DNS_PORT=53
@@ -19,6 +24,7 @@ if [ ! -d "node_modules" ]; then
 fi
 
 docker run --rm -it \
+  --name "pegaswitch" \
   -v $ROOT_DIR:/opt \
   -w /opt/pegaswitch \
   -p 0.0.0.0:$DNS_PORT:53 \
