@@ -1,0 +1,23 @@
+#!/bin/bash
+
+which docker
+
+if [ $? -ne 0 ]; then
+    echo "Docker must be installed to use this feature. Exiting..." >&2
+fi
+
+ROOT_DIR="$(dirname $(pwd))"
+
+DNS_PORT=53
+WEB_PORT=80
+OTHER_PORT=8100
+
+echo "Starting Pegaswitch..."
+
+docker run --rm -it \
+  -v $ROOT_DIR:/opt \
+  -w /opt/pegaswitch \
+  -p 0.0.0.0:$DNS_PORT:53 \
+  -p 0.0.0.0:$WEB_PORT:80 \
+  -p 0.0.0.0:$OTHER_PORT:8100 \
+  node:8 node start.js
