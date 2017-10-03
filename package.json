@@ -5,6 +5,7 @@
   "main": "start.js",
   "scripts": {
     "start": "node start.js",
+    "start-docker": "./bin/start-docker.sh",
     "test": "echo \"Error: no test specified\" && exit 1",
     "docs:generate": "documentation build -f html -o docs ./exploit/**.js",
     "docs:serve": "documentation serve ./exploit/**.js"

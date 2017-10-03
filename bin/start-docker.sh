@@ -4,10 +4,11 @@ which docker
 
 if [ $? -ne 0 ]; then
     echo "Docker must be installed to use this feature. Exiting..." >&2
+    exit 1
 fi
 
 if [ "$(docker ps -aq -f name=pegaswitch)" ]; then
-    echo "Pegaswitch is already running..."
+    echo "Pegaswitch is already running..." >&2
     exit 1
 fi
 
