@@ -18,7 +18,8 @@ const wss = new WebSocket.Server({ port: 8100 });
 
 const historyPath = path.resolve(__dirname, '.shell_history');
 
-console.log('Waiting for connection..');
+//This is needed to update the output to the console so the writing in start.js shows
+console.log('');
 
 let connection;
 
@@ -209,6 +210,7 @@ function showHelp (callback) {
 }
 
 let _; // last value reg
+let isJavascript = false;
 
 function defaultHandler (saveVal, callback) {
 	return function (response) {
@@ -221,6 +223,22 @@ function defaultHandler (saveVal, callback) {
 
 function handle (input, context, filename, callback) {
 	let tmp = input.replace(/\n$/, '');
+	if (isJavascript){
+		if(tmp.trim()==''){
+			isJavascript = false;
+			r.setPrompt('switch'.cyan+'> ');
+			console.log("");
+			return;
+		}
+		tmp = "eval "+tmp;
+	}
+	//for an eval with no arguments, just do js shell
+	if(tmp.trim()=="eval"){
+		isJavascript = true;
+		r.setPrompt('switch/js'.cyan+'> ');
+		console.log("");
+		return;
+	}
 
 	if (!tmp) {
 		return callback();
@@ -228,7 +246,7 @@ function handle (input, context, filename, callback) {
 
 	let saveVal = false;
 
-	let args = tmp.split(' ');
+	let args = tmp.trimLeft().split(' ');
 	let cmd = args.shift();
 
 	if (cmd === '_') {
@@ -340,5 +358,5 @@ r.on('exit', () => {
 	process.exit();
 });
 
-r.setPrompt('switch> ');
+r.setPrompt('switch'.cyan+'> ');
 r.prompt();
