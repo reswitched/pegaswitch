@@ -5,3 +5,5 @@ node_modules
 .shell_history
 bundle.js
 memdumps
+dumps
+sourcemap
