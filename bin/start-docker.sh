@@ -27,6 +27,8 @@ if [ ! -d "node_modules" ]; then
     echo "Node modules will install on the first run"
 fi
 
+ARGS="$@"
+
 docker run --rm -it \
   --name "pegaswitch" \
   -v $ROOT_DIR:/opt \
@@ -34,4 +36,4 @@ docker run --rm -it \
   -p $BIND_ADDRESS:$DNS_PORT:53 \
   -p $BIND_ADDRESS:$WEB_PORT:80 \
   -p $BIND_ADDRESS:$OTHER_PORT:8100 \
-  node:8 /bin/bash -c "if [ ! -d \"node_modules\" ]; then npm install; fi; node start.js $@"
+  node:8 /bin/bash -c "if [ ! -d \"node_modules\" ]; then npm install; fi; node start.js $ARGS;"
