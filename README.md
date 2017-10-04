@@ -22,7 +22,7 @@ Usage
 1. Ensure port 53, 80, and 8100 are open on the computer running pegaswitch.
 2. Start pegaswitch with `sudo node start.js`
 3. Configure your Switch DNS settings to point to the IP of your computer.
-4. Go to the eShop or another area that will trigger the captive portal
+4. Run a connection test to trigger the Captive Portal. (Likewise, going into an update page will do the same.)
 5. **STRONG SUGGESTION**: If this is your first time running PegaSwitch on a new console, run the command `evalfile usefulscripts/SetupNew.js` to set up useful settings.
 
 Documentation
