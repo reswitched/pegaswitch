@@ -16,7 +16,13 @@ The development environment is configured by using Docker to remove software req
 
 1. Install the latest version of Docker [[OSX](https://docs.docker.com/docker-for-mac/install/)] [[Other](https://docs.docker.com/engine/installation/#supported-platforms)]
 2. Clone this repository.
-3. Run `./bin/docker-start.sh`
+3. Run `./bin/docker-start.sh`.
+
+## Windows Instructions
+
+1. Install the latest version of [Docker](https://docs.docker.com/engine/installation/#supported-platforms).
+2. Clone this repository.
+3. Run `bin\start-docker.bat`.
 
 Installation (Advanced)
 =======================
