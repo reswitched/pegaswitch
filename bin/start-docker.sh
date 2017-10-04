@@ -8,17 +8,19 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ "$(docker ps -aq -f name=pegaswitch)" ]; then
-    echo "Pegaswitch is already running..." >&2
+    echo "PegaSwitch is already running..." >&2
     exit 1
 fi
 
 ROOT_DIR="$(dirname $(pwd))"
 
+BIND_ADDRESS=0.0.0.0
+
 DNS_PORT=53
 WEB_PORT=80
 OTHER_PORT=8100
 
-echo "Starting Pegaswitch..."
+echo "Starting PegaSwitch..."
 
 if [ ! -d "node_modules" ]; then
     echo "Node modules will install on the first run"
@@ -28,7 +30,7 @@ docker run --rm -it \
   --name "pegaswitch" \
   -v $ROOT_DIR:/opt \
   -w /opt/pegaswitch \
-  -p 0.0.0.0:$DNS_PORT:53 \
-  -p 0.0.0.0:$WEB_PORT:80 \
-  -p 0.0.0.0:$OTHER_PORT:8100 \
+  -p $BIND_ADDRESS:$DNS_PORT:53 \
+  -p $BIND_ADDRESS:$WEB_PORT:80 \
+  -p $BIND_ADDRESS:$OTHER_PORT:8100 \
   node:8 /bin/bash -c 'if [ ! -d "node_modules" ]; then npm install; fi; node start.js $@'
