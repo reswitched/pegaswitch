@@ -47,7 +47,7 @@ Documentation
 
 API documentation for SploitCore is automatically generated using jsdoc comments.
 
-You can find the latest version of documentation hosted [here](https://reswitched.github.io/PegaSwitch/)
+You can find the latest version of documentation hosted [here](https://reswitched.github.io/pegaswitch/)
 
 To view locally: `npm run docs:serve` then visit `http://localhost:4001`
 
