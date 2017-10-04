@@ -9,6 +9,7 @@ fi
 
 if [ "$(docker ps -aq -f name=pegaswitch)" ]; then
     echo "PegaSwitch is already running..." >&2
+    echo "Use `docker stop pegaswitch` to stop the running instance and try again." >&2
     exit 1
 fi
 
