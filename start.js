@@ -74,7 +74,6 @@ if (argv['disable-dns'] !== true) {
 		});
 
 		dns.listen(53, argv.host || '0.0.0.0', () => {
-			console.log("DNS Server started, responding with address " + ipAddr);
 			resolve();
 		});
 	});
