@@ -112,7 +112,7 @@ const fns = {
 	eval: {
 		response: 'evald',
 		help: 'eval <...code>',
-		helptxt: 'Evals code on remote console and returns response if applicable'
+		helptxt: 'Evals code on remote console and returns response if applicable, if no arguments are passed it will switch to js shell instead'
 	},
 	evalfile: {
 		response: 'evald',

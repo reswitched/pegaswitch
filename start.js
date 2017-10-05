@@ -329,8 +329,7 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 
 		// Render everything
 		screen.render();
-		let ipAddr = argv.ip || ip.address();
-		repl.write("Waiting for DNS connection at ip " + ipAddr + "...");
+		repl.write("Waiting for DNS connection at ip " + (argv.host || ip.address()) + "...");
 	}
 }, (e) => {
 	console.log("rejected " + e);
