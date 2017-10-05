@@ -263,6 +263,8 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 	}
 
 	if (argv['disable-curses']) {
+		console.log("Responding with address " + ipAddr);
+		console.log("Switch DNS IP: " + (argv.host || ip.address()) + " (Use this to connect)");
 		require('./repl');
 		logger = logf;
 		logf = {log: function() {}};
@@ -328,9 +330,12 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 
 		// Render everything
 		screen.render();
+
+		//Output ip addresses
 		repl.write("Responding with address " + ipAddr + "\r\n");
-		repl.write("Switch DNS IP: " + (argv.host || ip.address()) + " (Use this to connect)");
+		repl.write("Switch DNS IP: " + (argv.host || ip.address()) + " (Use this to connect)");	
 	}
+
 }, (e) => {
 	console.log("rejected " + e);
 	console.log(e.stack);
