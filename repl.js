@@ -235,6 +235,7 @@ function handle (input, context, filename, callback) {
 	if(tmp.trim()=="eval"){
 		isJavascript = true;
 		r.setPrompt('switch/js'.cyan+'> ');
+		console.log("Entered javascript interpreter hit [Enter] to exit");
 		return callback();
 	}
 
