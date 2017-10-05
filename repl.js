@@ -227,8 +227,7 @@ function handle (input, context, filename, callback) {
 		if(tmp.trim()==''){
 			isJavascript = false;
 			r.setPrompt('switch'.cyan+'> ');
-			console.log("");
-			return;
+			return callback();
 		}
 		tmp = "eval "+tmp;
 	}
@@ -236,8 +235,7 @@ function handle (input, context, filename, callback) {
 	if(tmp.trim()=="eval"){
 		isJavascript = true;
 		r.setPrompt('switch/js'.cyan+'> ');
-		console.log("");
-		return;
+		return callback();
 	}
 
 	if (!tmp) {
