@@ -41,8 +41,6 @@
   },
   "devDependencies": {
     "documentation": "^5.3.2",
-    "eslint": "^4.6.1",
-    "snazzy": "^7.0.0",
-    "standard": "^10.0.2"
+    "eslint": "^4.6.1"
   }
 }
