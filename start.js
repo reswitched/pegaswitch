@@ -58,8 +58,8 @@ let logf = {
 let dnsServerStarted;
 let httpServerStarted;
 
+let ipAddr = argv.ip || ip.address();
 if (argv['disable-dns'] !== true) {
-	let ipAddr = argv.ip || ip.address();
   
 	// Spin up our DNS server
 	let dns = dnsd.createServer(function (req, res) {
@@ -74,7 +74,6 @@ if (argv['disable-dns'] !== true) {
 		});
 
 		dns.listen(53, argv.host || '0.0.0.0', () => {
-			console.log("DNS Server started, responding with address " + ipAddr);
 			resolve();
 		});
 	});
@@ -264,6 +263,8 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 	}
 
 	if (argv['disable-curses']) {
+		console.log("Responding with address " + ipAddr);
+		console.log("Switch DNS IP: " + (argv.host || ip.address()) + " (Use this to connect)");
 		require('./repl');
 		logger = logf;
 		logf = {log: function() {}};
@@ -329,7 +330,12 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 
 		// Render everything
 		screen.render();
+
+		//Output ip addresses
+		repl.write("Responding with address " + ipAddr + "\r\n");
+		repl.write("Switch DNS IP: " + (argv.host || ip.address()) + " (Use this to connect)");	
 	}
+
 }, (e) => {
 	console.log("rejected " + e);
 	console.log(e.stack);
