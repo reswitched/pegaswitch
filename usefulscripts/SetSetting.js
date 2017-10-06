@@ -20,15 +20,13 @@ function setSetting(session, cls, nam, value) { // session is set:fd
 	return sc.ipcMsg(2).xDescriptor(x1, 48, 0).xDescriptor(x2, 48, 1).aDescriptor(a, 4, 0).sendTo(session).asResult();
 }
 
-sc.getService("set:sys", (setsys) => {
-	sc.getService("set:fd", (setfd) => {
-		var val = getSetting(setsys, cls, nam).assertOk();
-		utils.log(cls + '!' + nam + ': 0x' + val.toString(16));
-		setSetting(setfd, cls, nam, setValue).assertOk();
-		var val2 = getSetting(setsys, cls, nam).assertOk();
-		utils.log(cls + '!' + nam + ': 0x' + val2.toString(16));
-		if(val != val2) {
-			utils.log('SUCCESS');
-		}
-	});
+sc.getServices(["set:sys", "set:fd"], function (setsys, setfd) {
+  var val = getSetting(setsys, cls, nam).assertOk();
+  utils.log(cls + '!' + nam + ': 0x' + val.toString(16));
+  setSetting(setfd, cls, nam, setValue).assertOk();
+  var val2 = getSetting(setsys, cls, nam).assertOk();
+  utils.log(cls + '!' + nam + ': 0x' + val2.toString(16));
+  if(val != val2) {
+    utils.log('SUCCESS');
+  }
 });
