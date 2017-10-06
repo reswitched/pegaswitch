@@ -11,7 +11,7 @@ set BIND_ADDRESS=0.0.0.0
 
 set DNS_PORT=53
 set WEB_PORT=80
-set OTHER_PORT=8100
+set WS_PORT=8100
 
 ECHO Starting PegaSwitch...
 
@@ -27,5 +27,5 @@ docker run --rm -it^
  -w "/opt/pegaswitch"^
  -p %BIND_ADDRESS%:%DNS_PORT%:53/udp^
  -p %BIND_ADDRESS%:%WEB_PORT%:80^
- -p %BIND_ADDRESS%:%OTHER_PORT%:8100^
+ -p %BIND_ADDRESS%:%WS_PORT%:8100^
  node:8 "/bin/bash" "-c" "if [ ! -d \"node_modules\" ]; then npm install; fi; node start.js %*;"
