@@ -27,7 +27,7 @@ Usage
 
 Docker
 =====
-### Running Pegaswitch with Docker
+### Running with Docker
 
 You can run Pegaswitch using [Docker](https://docker.com). Be sure to use the IP address of the machine you are running docker and not the private IP address listed within Pegaswitch. Works on any Docker host including Raspberry Pi.
 ```
