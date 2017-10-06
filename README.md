@@ -33,7 +33,7 @@ You can run Pegaswitch using [Docker](https://docker.com). Be sure to use the IP
 ```
 docker build -t pegaswitch -f Dockerfile
 
-docker run --rm -t --net=host pegaswitch
+docker run --rm -t -p 53:53 -p 80:80 -p 8100:8100  pegaswitch
 ```
 
 Documentation
