@@ -25,6 +25,17 @@ Usage
 4. Run a connection test to trigger the Captive Portal. (Likewise, going into an update page will do the same.)
 5. **STRONG SUGGESTION**: If this is your first time running PegaSwitch on a new console, run the command `evalfile usefulscripts/SetupNew.js` to set up useful settings.
 
+Docker
+=====
+### Running with Docker
+
+You can run Pegaswitch using [Docker](https://docker.com). Be sure to use the IP address of the machine you are running docker and not the private IP address listed within Pegaswitch. Works on any Docker host including Raspberry Pi.
+```
+docker build -t pegaswitch -f Dockerfile
+
+docker run --rm -t -p 53:53 -p 80:80 -p 8100:8100  pegaswitch
+```
+
 Documentation
 =============
 
