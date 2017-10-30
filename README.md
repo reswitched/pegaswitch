@@ -41,11 +41,11 @@ Troubleshooting
 
 ### DNS responds with incorrect IP address
 
-You can override the IP address that pegaswitch responds with by passing an `--ip` argument to the `node start.js` command.
+You can override the IP address that pegaswitch responds with by passing an `--host` argument to the `node start.js` command.
 
 eg.
 ```
-sudo node start.js --ip 1.2.3.4
+sudo node start.js --host 1.2.3.4
 ```
 
 ### Windows support
