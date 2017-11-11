@@ -40,4 +40,4 @@ sc.write8(ta, sc.getAddr(temp), 4);
 var t = sc.ipcMsg(0).data(0, nrobase, 0x3000, [0, 0], 0).sendPid().sendTo('ldr:ro').assertOk();
 sc.nroBase = [t.data[0], t.data[1]];
 
-utils.log('NRO loaded at ' + utils.paddr(sc.svcNroBase));
+utils.log('NRO loaded at ' + utils.paddr(sc.nroBase));
