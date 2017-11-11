@@ -5,7 +5,7 @@ sc.write4(0x3052524E, buf);
 sc.write8([0x00000350, 0x1], utils.add2(buf, 0x340));
 sc.write4(0x1000, utils.add2(buf, 0x338));
 
-var hash = '02bc556cdadb4be3be06b87e8ae7081688bdb57aeb1138d5182f5b2bfe6d48ec';
+var hash = '8f6c79e4c65815069ab85964016aa5cea6bd2c83216bb2ea54b6232812b3051f';
 sc.memview(utils.add2(buf, 0x350), hash.length / 2, function(ab) {
 	var u8 = new Uint8Array(ab);
 	for(var i = 0; i < hash.length; i += 2)
@@ -37,6 +37,7 @@ sc.write8(nrobase, sc.getAddr(temp), 4);
 temp.set(u32);
 sc.write8(ta, sc.getAddr(temp), 4);
 
-sc.svcNroBase = sc.ipcMsg(0).data(0, nrobase, 0x3000, [0, 0], 0).sendPid().sendTo('ldr:ro').show().data[1];
+var t = sc.ipcMsg(0).data(0, nrobase, 0x3000, [0, 0], 0).sendPid().sendTo('ldr:ro').assertOk();
+sc.nroBase = [t.data[0], t.data[1]];
 
 utils.log('NRO loaded at ' + utils.paddr(sc.svcNroBase));

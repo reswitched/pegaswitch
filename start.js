@@ -104,6 +104,11 @@ app.get('/minmain.js', function (req, res) {
 	res.end(fs.readFileSync(path.resolve(__dirname, 'exploit/minmain.js')));
 });
 
+app.get('/nros/ace.nro', function (req, res) {
+  var u8 = new Uint8Array(fs.readFileSync(path.resolve(__dirname, 'nros/ace.nro')));
+  res.end(JSON.stringify(Array.prototype.slice.call(u8)));
+});
+
 app.get('/cache', function (req, res) {
 	var md5 = crypto.createHash('md5');
 	md5.update(req.headers['user-agent']);
