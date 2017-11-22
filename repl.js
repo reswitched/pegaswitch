@@ -174,7 +174,7 @@ const fns = {
 			try {
 				var filepath = path.resolve(__dirname, args[0]);
 				fs.statSync(filepath);
-				return [Array.from(new Uint8Array(fs.readFileSync(filepath).buffer))];
+				return [Array.from(new Uint8Array(fs.readFileSync(filepath).buffer))].concat(args.slice(1));
 			} catch (e) {
 				return callback(null, 'invalid file ' + e.message);
 			}
