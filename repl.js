@@ -11,6 +11,8 @@ const WebSocket = require('ws');
 const History = require('repl.history');
 const stringArgv = require('string-argv');
 
+const Table = require('easy-table');
+
 const utils = require('./exploit/utils');
 
 const ee = new events.EventEmitter();
@@ -21,7 +23,9 @@ const historyPath = path.resolve(__dirname, '.shell_history');
 //This is needed to update the output to the console so the writing in start.js shows
 console.log('');
 
-let connection;
+let connection = null;
+let connections = {};
+let nameToAddr = {};
 
 function sendMsg (cmd, args = []) {
 	connection.send(JSON.stringify({
@@ -145,6 +149,37 @@ const fns = {
 			}
 		}
 	},
+	runnro: {
+		response: 'rannro',
+		help: 'runnro <filename>',
+		helptext: 'Executes the given NRO',
+		complete: function (line) {
+			var args = line.split(' ');
+			var dirPath = './';
+			var path = '';
+			var match = args[1].match(/^.*[/\\]/);
+			if (match !== null) {
+				dirPath = path = match[0];
+			}
+			var matchPiece = args[1].substr(path.length);
+			try {
+				var files = fs.readdirSync(dirPath);
+				var completions = files.filter((c) => (path + c).startsWith(args[1])).map((c) => fs.lstatSync(dirPath + c).isDirectory() ? c + '/' : c).filter((c) => c.endsWith('/') || c.endsWith('.nro'));
+				return [completions, matchPiece];
+			} catch (e) {
+				throw e;
+			}			
+		},
+		setup: function (args, callback) {
+			try {
+				var filepath = path.resolve(__dirname, args[0]);
+				fs.statSync(filepath);
+				return [Array.from(new Uint8Array(fs.readFileSync(filepath).buffer))].concat(args.slice(1));
+			} catch (e) {
+				return callback(null, 'invalid file ' + e.message);
+			}
+		}
+	},
 	enable: {
 		help: 'enable <property>',
 		helptxt: 'Set the config property to `true`',
@@ -177,6 +212,49 @@ const fns = {
 			var args = line.split(" ");
 			var completions = Object.keys(loadConfig()).map((c) => args[0] + " " + c);
 			return [args[1].length ? completions.filter((k) => k.startsWith(line) && k.length > 0) : completions, line];
+		}
+	},
+	select: {
+		help: 'select <mac>|<name>|none',
+		helptxt: 'Select a different Switch to send commands to',
+		noSend: true,
+		setup(args, callback) {
+			if(args[0] == "none") {
+				selectConsole(null);
+			} else {
+				var ws = lookupConnection(args[0]);
+				if(ws) {
+					selectConsole(ws.macAddr);
+				} else {
+					utils.log(("No such console '" + args[0] + "'. Try `consoles` to get a list of connected consoles").bold);
+				}
+			}
+			return callback();
+		},
+		complete(line) {
+			var args = line.split(" ");
+			var names = Object.keys(connections).filter((k) => connections[k]).concat(Object.keys(nameToAddr)).filter(lookupConnection);
+			var completions = names;
+			completions.push("none");
+			return [args[1].length ? completions.filter((k) => k.startsWith(args[1]) && k.length > 0) : completions, args[1]];
+		}
+	},
+	consoles: {
+		help: 'consoles',
+		helptxt: 'List connected consoles',
+		noSend: true,
+		setup(args, callback) {
+			var t = new Table();
+			Object.values(connections).forEach((ws) => {
+				if(ws != null) {
+					t.cell("Wi-Fi MAC Address", ws.macAddr);
+					t.cell("Version", ws.fwVersion);
+					t.cell("Name", ws.name || "<unnamed>");
+					t.newRow();
+				}
+			});
+			console.log(t.toString());
+			return callback();
 		}
 	},
 	exit: {
@@ -226,7 +304,7 @@ function handle (input, context, filename, callback) {
 	if (isJavascript){
 		if(tmp.trim()==''){
 			isJavascript = false;
-			r.setPrompt('switch'.cyan+'> ');
+			setPrompt();
 			return callback();
 		}
 		tmp = "eval "+tmp;
@@ -234,8 +312,8 @@ function handle (input, context, filename, callback) {
 	//for an eval with no arguments, just do js shell
 	if(tmp.trim()=="eval"){
 		isJavascript = true;
-		r.setPrompt('switch/js'.cyan+'> ');
-		console.log("Entered javascript interpreter hit [Enter] to exit");
+		setPrompt();
+		console.log("Entered javascript interpreter. Hit [Enter] to exit");
 		return callback();
 	}
 
@@ -283,8 +361,13 @@ function handle (input, context, filename, callback) {
 	}
 
 	if (!connection && !fn.noSend) {
-		console.log('Switch not connected...'.bold);
-		r.prompt();
+		if(Object.values(connections).some((c) => c !== null)) {
+			console.log("No console selected (use the `select` command).".bold);
+			r.prompt();
+		} else {
+			console.log("No consoles connected.".bold);
+			r.prompt();
+		}
 		return; 
 	}
   
@@ -332,24 +415,85 @@ const r = repl.start({
 
 History(r, historyPath);
 
-wss.on('connection', function (ws) {
-	connection = ws;
-	console.log();
-	console.log('Switch connected...');
-	r.prompt(true);
+function consoleName(mac) {
+	return mac;
+}
 
-	ws.on('close', function () {
-		console.log();
-		console.log('Switch disconnected...');
-		r.prompt(true);
+function setPrompt() {
+	var jsPart = isJavascript ? "/js" : "";
+	if(connection) {
+		r.setPrompt(("switch '" + consoleName(connection.macAddr) + "' (" + connection.fwVersion + ")" + jsPart).cyan + "> ");
+	} else {
+		r.setPrompt(("switch" + jsPart).cyan + "> ");
+	}
+}
+
+function lookupConnection(name) {
+	if(connections[name]) { // mac addr
+		return connections[name];
+	}
+	if(nameToAddr[name]) { // name
+		return connections[nameToAddr[name]];
+	}
+	return null;
+}
+	
+function selectConsole(mac) {
+	if(mac == null) {
 		connection = null;
+		setPrompt();
+		r.prompt(true);
+	} else {
+		connection = connections[mac];
+		setPrompt();
+		r.prompt(true);
+	}
+}
+
+wss.on('connection', function (ws) {
+	ws.on('close', function () {
+		if(ws.macAddr && connections[ws.macAddr] == ws) {
+			connections[ws.macAddr] = null;
+			console.log();
+			console.log("Switch '" + consoleName(ws.macAddr) + "' (" + ws.fwVersion + ") disconnected.");
+			if(connection === ws) {
+				selectConsole(null);
+			} else {
+				r.prompt(true);
+			}
+		}
 	});
 
-	ws.on('message', function (data) {
+	ws.on('message', function(data) {
 		data = JSON.parse(data);
 		const type = data.type;
 		const response = data.response;
-		ee.emit(type, response);
+		if(type == "identification") {
+			var u8 = new Uint8Array(8);
+			var u32 = new Uint32Array(u8.buffer);
+			u32[0] = data.mac[0];
+			u32[1] = data.mac[1];
+			var mac = "";
+			for(var i = 0; i < 6; i++) {
+				var str = u8[i].toString(16);
+				while(str.length < 2) {
+					str = "0" + str;
+				}
+				mac = mac + str;
+			}
+			ws.macAddr = mac;
+			ws.fwVersion = data.version;
+			connections[mac] = ws;
+			console.log();
+			console.log("Switch '" + consoleName(mac) + "' (" + data.version + ") connected.");
+			if(connection === null || connection.macAddr == mac) {
+				selectConsole(mac);
+			} else {
+				r.prompt(true);
+			}
+		} else {
+			ee.emit(type, response, ws.macAddr);
+		}
 	});
 });
 
@@ -357,5 +501,4 @@ r.on('exit', () => {
 	process.exit();
 });
 
-r.setPrompt('switch'.cyan+'> ');
-r.prompt();
+selectConsole(null);
