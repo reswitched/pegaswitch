@@ -50,9 +50,12 @@ sudo node start.js --ip 1.2.3.4
 
 ### Windows support
 
-The full curses interface on Windows is supported using WSL only. We will not provide support for native cmd.exe as it lacks necessary functionality.
+To run pegaswitch on Windows (ensure the above ports are open):
 
-You can, however, use --disable-curses and write the debug log out to a file for ing.
+```
+C:\pegaswitch\> node start.js --disable-curses --logfile log.txt
+```
+
 
 License
 =======
