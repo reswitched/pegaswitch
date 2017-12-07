@@ -16,11 +16,6 @@ const contrib = require('blessed-contrib');
 const yargs = require('yargs');
 // const dnslookup = require('dns')
 
-if (os.platform() !== 'win32' && process.getuid() !== 0) {
-	console.error('Please run as root so we can bind to port 53 & 80');
-	process.exit();
-}
-
 let argv = yargs
 	.usage('Usage $0')
 	.describe('disable-curses', 'Disabled curses interface. Requires --logfile')
@@ -38,9 +33,21 @@ let argv = yargs
 	.alias('h', 'help')
 	.argv;
 
+if(os.platform() === 'win32') {
+	if(!argv['disable-curses']) {
+		console.warn('WARNING: pegaswitch does not support curses on Windows. Curses disabled by default.');
+		//argv['disable-curses'] = true;
+	}
+
+} else if (os.platform() !== 'win32' && process.getuid() !== 0) {
+	console.error('Please run as root so we can bind to port 53 & 80');
+	process.exit();
+}	
+	
 if (argv['disable-curses'] && !argv.logfile) {
-	console.error('--disable-curses requires --logfile');
-	process.exit(1);
+	argv.logfile = 'pegaswitch.log'
+	console.warn('With curses disabled, --logfile is required, but was not found.');
+	console.log('Defaulting to \"pegaswitch.log\".');
 }
 
 let logf = {
@@ -276,7 +283,8 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 	} else {
 		// Setup our terminal
 		let screen = blessed.screen({
-			smartCSR: true
+			smartCSR: true,
+			terminal: 'windows-ansi'
 		});
 
 		let log = contrib.log({
