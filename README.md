@@ -16,6 +16,10 @@ Installation
 2. Clone this repository
 3. Run `npm install`
 
+Run in docker
+=============
+See [README.docker.md](README.docker.md)
+
 Usage
 =====
 
