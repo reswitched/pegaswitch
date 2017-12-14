@@ -4,6 +4,7 @@ ADD . /pegaswitch
 WORKDIR /pegaswitch
 
 RUN npm install
+RUN npm install pty.js
 
 EXPOSE 53 53/udp 80 8100
 
