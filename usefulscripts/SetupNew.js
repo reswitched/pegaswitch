@@ -1,3 +1,7 @@
+/*
+	Both of these settings are automatically set by PegaSwitch. You shouldn't need to run this script.
+ */
+
 sc.killAutoHandle();
 
 var settings = {
