@@ -1,0 +1,12 @@
+version: '3'
+services:
+  pegaswitch:
+    container_name: pegaswitch
+    build: .
+    volumes:
+      - .:/opt/app
+    ports:
+      - 80:80
+      - 53:53
+      - 8100:8100
+    restart: always

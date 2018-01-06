@@ -12,15 +12,18 @@
 Installation
 ============
 
-1. Install the latest version of node from [nodejs.org](https://nodejs.org)
+1. Install Docker
+2. Install Docker-Compose
+3. Ensure Docker Has Minimum 4GB of Resources (Default 2GB)
 2. Clone this repository
-3. Run `npm install`
+3. Run `docker-compose up`
 
 Usage
 =====
 
 1. Ensure port 53, 80, and 8100 are open on the computer running pegaswitch.
-2. Start pegaswitch with `sudo node start.js`
+2. PegaSwitch will start automatically when you start the docker container.
+3. To run PegaSwitch natively without a container install NodeJS and run `npm install`.
 3. Configure your Switch DNS settings to point to the IP of your computer.
 4. Run a connection test to trigger the Captive Portal. (Likewise, going into an update page will do the same.)
 
@@ -36,6 +39,12 @@ You can find the latest version of documentation hosted [here](https://reswitche
 To view locally: `npm run docs:serve` then visit `http://localhost:4001`
 
 To generate to `docs` folder: `npm run docs:generate`
+
+Why Docker?
+===============
+
+Docker allows the app to run in the same environment, regardless of what OS the host computer is running. This
+simplifies development as well as reduces bugs and improves overall performance.
 
 Troubleshooting
 ===============
@@ -60,7 +69,9 @@ ex:
 C:\pegaswitch\> node start.js --logfile log.txt
 ```
 
-If you encounter problems using pegaswitch on Windows, we suggest installing through WSL.
+If you encounter problems using pegaswitch on Windows, we suggest using Docker.
+
+NOTE: If running inside docker container inside Windows, this does not apply.
 
 License
 =======
