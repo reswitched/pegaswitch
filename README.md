@@ -14,9 +14,8 @@ Installation
 
 1. Install Docker
 2. Install Docker-Compose
-3. Ensure Docker Has Minimum 4GB of Resources (Default 2GB)
-2. Clone this repository
-3. Run `docker-compose up`
+3. Clone this repository
+4. Run `docker-compose up`
 
 Usage
 =====
@@ -24,8 +23,8 @@ Usage
 1. Ensure port 53, 80, and 8100 are open on the computer running pegaswitch.
 2. PegaSwitch will start automatically when you start the docker container.
 3. To run PegaSwitch natively without a container install NodeJS and run `npm install`.
-3. Configure your Switch DNS settings to point to the IP of your computer.
-4. Run a connection test to trigger the Captive Portal. (Likewise, going into an update page will do the same.)
+4. Configure your Switch DNS settings to point to the IP of your computer.
+5. Run a connection test to trigger the Captive Portal. (Likewise, going into an update page will do the same.)
 
 It should no longer be necessary to run `usefulscripts/SetupNew.js`, since PegaSwitch will now do it automatically.
 
