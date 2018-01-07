@@ -110,8 +110,8 @@ app.get('/minmain.js', function (req, res) {
 	res.end(fs.readFileSync(path.resolve(__dirname, 'exploit/minmain.js')));
 });
 
-app.get('/nros/ace.nro', function (req, res) {
-  var u8 = new Uint8Array(fs.readFileSync(path.resolve(__dirname, 'nros/ace.nro')));
+app.get('/nros/:nroname', function (req, res) {
+  var u8 = new Uint8Array(fs.readFileSync(path.resolve(__dirname, 'nros', req.params.nroname)));
   res.end(JSON.stringify(Array.prototype.slice.call(u8)));
 });
 
