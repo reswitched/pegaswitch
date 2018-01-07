@@ -115,6 +115,21 @@ app.get('/nros/ace.nro', function (req, res) {
   res.end(JSON.stringify(Array.prototype.slice.call(u8)));
 });
 
+// static files for GUI
+app.use('/files', express.static(path.join(__dirname, 'files')));
+// app listing for GUI
+app.get('/files/app_list', function (req, res) {
+	var app_list = '';
+	var dir = path.join(__dirname, 'files') + '/';
+	var files = fs.readdirSync(dir);
+
+	for(var i = 0; i < files.length; i++)
+		if(fs.statSync(dir + files[i]).isDirectory())
+			app_list += files[i] + '\n';
+
+	res.end(app_list);
+});
+
 app.get('/cache', function (req, res) {
 	var md5 = crypto.createHash('md5');
 	md5.update(req.headers['user-agent']);
