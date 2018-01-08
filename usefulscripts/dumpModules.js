@@ -57,10 +57,7 @@ function dumpModule(module, loader, name) {
 			sc.withHandle(fs.movedHandles[0], (storage) => {
 				//utils.log('Got IFileSystem handle: 0x'+ storage.toString(16));
 				var fs = new sc.IFileSystem(sc, storage);
-				//I wasn't able to use the OpenDir built-in of reswitched, it seems to be broken, so I created my own instance of IDirectory
-				var path = utils.str2ab('/');
-				var res = sc.ipcMsg(9).datau64(3).xDescriptor(path, path.byteLength, 0).sendTo(storage);	
-				var dir = new sc.IDirectory(sc, '/', res.movedHandles[0], fs);
+				var dir = fs.OpenDir('/').getValue();
 				//DUMP ALL THE THINGS
 				dir.DirDump(name);
 			});
