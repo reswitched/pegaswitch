@@ -225,7 +225,9 @@ app.post('/filedump', function (req, res) {
 		flags: 'a'
 	}));
 
-	return res.sendStatus(200);
+	req.on('end', function() {
+		return res.sendStatus(200);
+	});
 });
 
 app.post('/fakeInternet', function (req, res) {
