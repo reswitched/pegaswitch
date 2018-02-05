@@ -100,10 +100,8 @@ var fakeInternetEnabled = false;
 app.get('/', function (req, res) {
 	if (fakeInternetEnabled) {
 		res.set('X-Organization', 'Nintendo');
-		res.end('fake page');
-	} else {
-		serveIndex(req, res);
 	}
+	serveIndex(req, res);
 });
 
 app.get('/minmain.js', function (req, res) {
@@ -231,12 +229,8 @@ app.post('/filedump', function (req, res) {
 });
 
 app.post('/fakeInternet', function (req, res) {
-	console.log('enabling fake internet');
-	fakeInternetEnabled = true;
-	setTimeout(function () {
-		console.log('disabling fake internet');
-		fakeInternetEnabled = false;
-	}, 8000);
+	console.log('toggling fake internet');
+	fakeInternetEnabled = !fakeInternetEnabled;
 });
 
 httpServerStarted = new Promise((resolve, reject) => {
@@ -258,6 +252,10 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 			console.log('Failed to drop privileges');
 			process.exit(1);
 		}
+	}
+    
+    if (argv['webapplet'] !== undefined) {
+		fakeInternetEnabled = true;
 	}
   
 	if (argv['setuid'] !== undefined) {

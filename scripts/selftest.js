@@ -402,7 +402,8 @@ new Test("sc.memview view buffer length is correct", () => {
   return true;
 });
 
-new Test("sc.call works", () => {
+new Test("sc.call (non-turbo) works", () => {
+  sc.disableTurbo();
   var str = "test string";
 	var ab = utils.str2ab(str);
 	var addr = sc.getArrayBufferAddr(ab);
@@ -414,7 +415,8 @@ new Test("sc.call works", () => {
   return true;
 });
 
-new Test("sc.call translates ArrayBuffers to pointers to their data", () => {
+new Test("sc.call (non-turbo) translates ArrayBuffers to pointers to their data", () => {
+  sc.disableTurbo();
   var ab = new ArrayBuffer(30);
   var u8 = new Uint8Array(ab);
   var str = "test string";
@@ -430,7 +432,52 @@ new Test("sc.call translates ArrayBuffers to pointers to their data", () => {
   return true;
 });
 
-new Test("sc.call translates TypedArrays to pointers to their data", () => {
+new Test("sc.call (non-turbo) translates TypedArrays to pointers to their data", () => {
+  sc.disableTurbo();
+  var u8 = new Uint8Array(30);
+  var str = "test string";
+  for(var i = 0; i < str.length; i++) {
+    u8[i] = str.charCodeAt(i);
+  }
+  u8[str.length] = 0;
+  assertPairEq(
+    // strlen
+    sc.call(sc.gadget("e80300aa09084092e90000b4e80300aa090140390902003408050091"), [u8]),
+    [str.length, 0]);
+
+  return true;
+});
+
+new Test("sc.call (turbo) works", () => {
+  sc.enableTurbo();
+  var str = "test string";
+  assertPairEq(
+    // strlen
+    sc.call(sc.gadget("e80300aa09084092e90000b4e80300aa090140390902003408050091"), [sc.str2buf(str)]),
+    [str.length, 0]);
+
+  return true;
+});
+
+new Test("sc.call (turbo) translates ArrayBuffers to pointers to their data", () => {
+  sc.enableTurbo();
+  var ab = new ArrayBuffer(30);
+  var u8 = new Uint8Array(ab);
+  var str = "test string";
+  for(var i = 0; i < str.length; i++) {
+    u8[i] = str.charCodeAt(i);
+  }
+  u8[str.length] = 0;
+  assertPairEq(
+    // strlen
+    sc.call(sc.gadget("e80300aa09084092e90000b4e80300aa090140390902003408050091"), [ab]),
+    [str.length, 0]);
+
+  return true;
+});
+
+new Test("sc.call (turbo) translates TypedArrays to pointers to their data", () => {
+  sc.enableTurbo();
   var u8 = new Uint8Array(30);
   var str = "test string";
   for(var i = 0; i < str.length; i++) {
