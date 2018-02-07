@@ -100,18 +100,16 @@ var fakeInternetEnabled = false;
 app.get('/', function (req, res) {
 	if (fakeInternetEnabled) {
 		res.set('X-Organization', 'Nintendo');
-		res.end('fake page');
-	} else {
-		serveIndex(req, res);
 	}
+	serveIndex(req, res);
 });
 
 app.get('/minmain.js', function (req, res) {
 	res.end(fs.readFileSync(path.resolve(__dirname, 'exploit/minmain.js')));
 });
 
-app.get('/nros/ace.nro', function (req, res) {
-  var u8 = new Uint8Array(fs.readFileSync(path.resolve(__dirname, 'nros/ace.nro')));
+app.get('/nros/:nroname', function (req, res) {
+  var u8 = new Uint8Array(fs.readFileSync(path.resolve(__dirname, 'nros', req.params.nroname)));
   res.end(JSON.stringify(Array.prototype.slice.call(u8)));
 });
 
@@ -225,16 +223,14 @@ app.post('/filedump', function (req, res) {
 		flags: 'a'
 	}));
 
-	return res.sendStatus(200);
+	req.on('end', function() {
+		return res.sendStatus(200);
+	});
 });
 
 app.post('/fakeInternet', function (req, res) {
-	console.log('enabling fake internet');
-	fakeInternetEnabled = true;
-	setTimeout(function () {
-		console.log('disabling fake internet');
-		fakeInternetEnabled = false;
-	}, 8000);
+	console.log('toggling fake internet');
+	fakeInternetEnabled = !fakeInternetEnabled;
 });
 
 httpServerStarted = new Promise((resolve, reject) => {
@@ -256,6 +252,10 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 			console.log('Failed to drop privileges');
 			process.exit(1);
 		}
+	}
+    
+    if (argv['webapplet'] !== undefined) {
+		fakeInternetEnabled = true;
 	}
   
 	if (argv['setuid'] !== undefined) {

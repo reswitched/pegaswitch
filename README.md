@@ -23,7 +23,8 @@ Usage
 2. Start pegaswitch with `sudo node start.js`
 3. Configure your Switch DNS settings to point to the IP of your computer.
 4. Run a connection test to trigger the Captive Portal. (Likewise, going into an update page will do the same.)
-5. **STRONG SUGGESTION**: If this is your first time running PegaSwitch on a new console, run the command `evalfile usefulscripts/SetupNew.js` to set up useful settings.
+
+It should no longer be necessary to run `usefulscripts/SetupNew.js`, since PegaSwitch will now do it automatically.
 
 ## Through Docker
 ### Building
