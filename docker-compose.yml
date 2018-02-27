@@ -1,0 +1,13 @@
+version: '3'
+services:
+  pegaswitch:
+    container_name: pegaswitch
+    build: .
+    # Uncomment only if you want to devleop on app locally and within container. If just running app no need to do anything. #
+    # volumes:
+    #   - .:/opt/app
+    ports:
+      - 80:80
+      - 53:53
+      - 8100:8100
+    restart: always
