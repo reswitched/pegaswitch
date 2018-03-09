@@ -1,4 +1,5 @@
 var modules ={
+		// Sysmodules
 		'usb' : '0100000000000006',
 		'tma' : '0100000000000007',
 		'boot2': '0100000000000008',
@@ -41,6 +42,30 @@ var modules ={
 		'fatal' : '0100000000000034',
 		'creport' : '0100000000000036',
 
+		// Applets
+		'qlaunch': '0100000000001000',
+		'auth': '0100000000001001',
+		'cabinet': '0100000000001002',
+		'controller': '0100000000001003',
+		'dataErase': '0100000000001004',
+		'error': '0100000000001005',
+		'netConnect': '0100000000001006',
+		'playerSelect': '0100000000001007',
+		'swkbd': '0100000000001008',
+		'miiEdit': '0100000000001009',
+		'LibAppletWeb': '010000000000100A',
+		'LibAppletShop': '010000000000100B',
+		'overlayDisp': '010000000000100C',
+		'photoViewer': '010000000000100D',
+		'LibAppletOff': '010000000000100F',
+		'LibAppletLns': '0100000000001010',
+		'LibAppletAuth': '0100000000001011',
+		'starter': '0100000000001012',
+		'myPage': '0100000000001013',
+		'maintenance': '0100000000001015',
+
+		// System Apps
+		'flog': '01008BB00013C000'
 };
 function dumpModule(module, loader, name) {
 	//We need a ILocationResolver to pass to fsp to say what we are reading so we're getting a handle
