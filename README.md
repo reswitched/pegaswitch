@@ -23,6 +23,7 @@ Usage
 2. Start pegaswitch with `sudo node start.js`
 3. Configure your Switch DNS settings to point to the IP of your computer.
 4. Run a connection test to trigger the Captive Portal. (Likewise, going into an update page will do the same.)
+    * If on 1.0.0, [use a JPN copy of Puyo Puyo Tetris to launch the browser](http://switchbrew.org/index.php?title=Internet_Browser#WebApplet_launch_with_Tetris)
 
 It should no longer be necessary to run `usefulscripts/SetupNew.js`, since PegaSwitch will now do it automatically.
 
