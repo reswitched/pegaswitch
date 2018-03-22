@@ -20,7 +20,7 @@ Usage
 =====
 
 1. Ensure port 53, 80, and 8100 are open on the computer running pegaswitch.
-2. Start pegaswitch with `sudo node start.js`
+2. Start pegaswitch with `sudo npm start`
 3. Configure your Switch DNS settings to point to the IP of your computer.
 4. Run a connection test to trigger the Captive Portal. (Likewise, going into an update page will do the same.)
     * If on 1.0.0, [use a JPN copy of Puyo Puyo Tetris to launch the browser](http://switchbrew.org/index.php?title=Internet_Browser#WebApplet_launch_with_Tetris)
@@ -47,7 +47,7 @@ You can override the IP address that pegaswitch responds with by passing an `--i
 
 eg.
 ```
-sudo node start.js --ip 1.2.3.4
+sudo npm start --ip 1.2.3.4
 ```
 
 ### Windows support
@@ -58,7 +58,7 @@ If --logfile is not specified, pegaswitch.log is used. You may open it with the 
 
 ex:
 ```
-C:\pegaswitch\> node start.js --logfile log.txt
+C:\pegaswitch\> npm start --logfile log.txt
 ```
 
 If you encounter problems using pegaswitch on Windows, we suggest installing through WSL.
