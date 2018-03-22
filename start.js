@@ -18,7 +18,7 @@ const yargs = require('yargs');
 
 let argv = yargs
 	.usage('Usage $0')
-	.describe('enable-curses', 'Enable curses interface. Requires --logfile')
+	.describe('enable-curses', 'Enable curses interface.')
 	.describe('disable-dns', 'Disables builtin DNS server.')
 	.describe('ip', 'Override IP address DNS server responds with')
 	.describe('host', 'Override listen IP.')
