@@ -19,11 +19,12 @@ Installation
 Usage
 =====
 
-1. Ensure port 53, 80, and 8100 are open on the computer running pegaswitch.
-2. Start pegaswitch with `sudo node start.js`
+1. Ensure port 53, 80, and 8100 are open on the computer running PegaSwitch.
+2. Start PegaSwitch with `sudo node start.js`
+    * If on 1.0.0 or you are using the Fake News entrypoint, you will need to run `sudo node start.js --webapplet` instead. 
 3. Configure your Switch DNS settings to point to the IP of your computer.
 4. Run a connection test to trigger the Captive Portal. (Likewise, going into an update page will do the same.)
-    * If on 1.0.0, [use a JPN copy of Puyo Puyo Tetris to launch the browser](http://switchbrew.org/index.php?title=Internet_Browser#WebApplet_launch_with_Tetris)
+    * If on 1.0.0, [use a JPN copy of Puyo Puyo Tetris to launch the webapplet](http://switchbrew.org/index.php?title=Internet_Browser#WebApplet_launch_with_Tetris) instead.
 
 It should no longer be necessary to run `usefulscripts/SetupNew.js`, since PegaSwitch will now do it automatically.
 
