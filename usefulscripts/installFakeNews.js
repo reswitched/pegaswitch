@@ -46,10 +46,6 @@ if (sc.elev_privs === undefined || !sc.elev_privs) {
     sc.getService("pm:dmnt", (hndle) => {
         utils.log("got handle 0x" + hndle.toString(16));
 
-        // get webkit PID
-        
-
-
         // crash PM
         for(var i = 0; i < 64; i++)
         {
@@ -95,7 +91,7 @@ sc.getService("fsp-srv", (hndle) => {
         utils.log("commit");
         sc.ipcMsg(10).sendTo(bish).assertOk(); // commit
         utils.log("finished");
-        if (this.version === '1.0.0') {    
+        if (sc.version === '1.0.0') {    
             sc.ipcMsg(1).sendTo("bpc:c").assertOk();
         } else {
             sc.ipcMsg(1).sendTo("bpc").assertOk();
