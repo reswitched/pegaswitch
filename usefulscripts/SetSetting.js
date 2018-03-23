@@ -21,12 +21,12 @@ function setSetting(session, cls, nam, value) { // session is set:fd
 }
 
 sc.getServices(["set:sys", "set:fd"], function (setsys, setfd) {
-  var val = getSetting(setsys, cls, nam).assertOk();
-  utils.log(cls + '!' + nam + ': 0x' + val.toString(16));
-  setSetting(setfd, cls, nam, setValue).assertOk();
-  var val2 = getSetting(setsys, cls, nam).assertOk();
-  utils.log(cls + '!' + nam + ': 0x' + val2.toString(16));
-  if(val != val2) {
-    utils.log('SUCCESS');
-  }
+	var val = getSetting(setsys, cls, nam).assertOk();
+	utils.log(cls + '!' + nam + ': 0x' + val.toString(16));
+	setSetting(setfd, cls, nam, setValue).assertOk();
+	var val2 = getSetting(setsys, cls, nam).assertOk();
+	utils.log(cls + '!' + nam + ': 0x' + val2.toString(16));
+	if(val != val2) {
+		utils.log('SUCCESS');
+	}
 });

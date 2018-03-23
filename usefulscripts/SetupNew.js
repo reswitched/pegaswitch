@@ -26,18 +26,18 @@ function setSetting(session, cls, nam, value) { // session is set:fd
 
 var keys = Object.keys(settings);
 sc.getServices(["set:sys", "set:fd"], function (setsys, setfd) {
-  for(var elem of keys) {
-    var velem = elem.split('!');
-    var cls = velem[0], name = velem[1];
-    var orig = getSetting(setsys, cls, name).assertOk();
-    utils.log(elem + ' original: 0x' + orig.toString(16));
-    var set = settings[elem];
-    utils.log(elem + ' assigning to: 0x' + set.toString(16));
-    setSetting(setfd, cls, name, set).assertOk();
-    if(getSetting(setsys, cls, name).assertOk() != set) {
-      utils.log('... FAILED');
-    }
-  }
+	for(var elem of keys) {
+		var velem = elem.split('!');
+		var cls = velem[0], name = velem[1];
+		var orig = getSetting(setsys, cls, name).assertOk();
+		utils.log(elem + ' original: 0x' + orig.toString(16));
+		var set = settings[elem];
+		utils.log(elem + ' assigning to: 0x' + set.toString(16));
+		setSetting(setfd, cls, name, set).assertOk();
+		if(getSetting(setsys, cls, name).assertOk() != set) {
+			utils.log('... FAILED');
+		}
+	}
 });
 
 utils.log("done");
