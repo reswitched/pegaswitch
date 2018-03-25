@@ -9,7 +9,7 @@
   An exploit toolkit for the Nintendo Switch™
 </p>
 
-[Guide/Installation](GUIDE.md)
+[Installation](GUIDE.md)
 =====
 
 Usage

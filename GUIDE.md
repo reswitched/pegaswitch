@@ -7,8 +7,6 @@ Requirements
 - A Nintendo Switch running FW 1.0.0 - 3.1.0
 	- For 1.0.0, you will also need a copy of [Puyo Puyo Tetris JP](https://www.amazon.com/gp/product/B01N4PKS4S/ref=oh_aui_detailpage_o00_s00?ie=UTF8&psc=1)
 - A PC running any OS capable of running Node.JS that is connected to a network your Switch can connect to
-- ~30 minutes, give or take based on connection speed
-- Half a brain
 
 Setting up the Environment
 --------------------------
@@ -39,7 +37,7 @@ Setting up Pegaswitch
 ---------------------
 1. In a terminal window, navigate to the location you want to install Pegaswitch to, and clone the Pegaswitch git repository using `git clone https://github.com/reswitched/pegaswitch.git`.
 2. Navigate into the new `pegaswitch` directory, and run `npm i`. This will install all the modules needed for Pegaswitch to function.
-3. Start Pegaswitch with `sudo node start --setuid <user_id>`. Your user id can be found by running `id`, and searching the number next to your username (typically 1000, on a single-user system).
+3. Start Pegaswitch with `sudo node start --setuid $(id)`. Your user id can be found by running `id`, and searching the number next to your username (typically 1000, on a single-user system).
 	- If you are using Puyo Puyo Tetris or fakenews to access Pegaswitch, add `--webapplet` to this command. 
 
 Launching Pegaswitch
@@ -47,8 +45,9 @@ Launching Pegaswitch
 4. Setup a connection to the Internet on your Switch, if you haven't already. Don't stay connected for too long without setting the DNS, otherwise your Switch may download an update.
 5. On your Switch, go into Settings -> Internet -> Internet Settings, pick the network your computer running Pegaswitch is connected to, and select Change Settings.
 6. Select DNS Settings and change it from Automatic to Manual. Set the Primary and Secondary DNS settings to the IP address that Pegaswitch shows in it's console.
-7.  - 1.0.0: Follow the instructions [here](http://switchbrew.org/index.php?title=Internet_Browser#WebApplet_launch_with_Tetris) to launch Pegaswitch with Puyo Puyo Tetris.
+7.  - 1.0.0: Follow the instructions [here](http://switchbrew.org/index.php?title=Internet_Browser#WebApplet_launch_with_Tetris) to launch Pegaswitch with Puyo Puyo Tetris. If you 	don't feel like running PPT everytime you want to use pegaswitch see fakenews below.
 	- 2.0.0 or above: Go back, and select Connect to This Network. If you set it up correctly, the connection should fail with the message "Registration is required to use this network.", and you will enter Pegaswitch.
+}
 8. Congratulations! You have successfully run Pegaswitch on your console!
 
 Optional: Setup fakenews
@@ -68,7 +67,7 @@ There are a few possible problems:
 
 - You didn't type the DNS IP properly in your Switch. Double-check that it matched the one displayed in the Pegaswitch console.
 - Pegaswitch isn't running on your computer. Make sure that Pegaswitch is started and running on your computer, and that it didn't crash with an error.
-- Your firewall might be blocking the required ports. Consult the documentation for your systems firewall to unblock UDP port 51, and TCP ports 80 and 8001.
+- Your firewall might be blocking the required ports. Consult the documentation for your systems firewall to unblock UDP port 51, and TCP ports 80 and 8100.
 ### What can I do with Pegaswitch?
 TODO: give some examples of things users can do with pegaswitch
 ### I have a question!
