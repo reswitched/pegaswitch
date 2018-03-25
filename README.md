@@ -9,12 +9,8 @@
   An exploit toolkit for the Nintendo Switch™
 </p>
 
-Installation
-============
-
-1. Install the latest version of node from [nodejs.org](https://nodejs.org)
-2. Clone this repository
-3. Run `npm install`
+[Guide/Installation](GUIDE.md)
+=====
 
 Usage
 =====
