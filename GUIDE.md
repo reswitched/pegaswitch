@@ -47,7 +47,6 @@ Launching Pegaswitch
 6. Select DNS Settings and change it from Automatic to Manual. Set the Primary and Secondary DNS settings to the IP address that Pegaswitch shows in it's console.
 7.  - 1.0.0: Follow the instructions [here](http://switchbrew.org/index.php?title=Internet_Browser#WebApplet_launch_with_Tetris) to launch Pegaswitch with Puyo Puyo Tetris. If you 	don't feel like running PPT everytime you want to use pegaswitch see fakenews below.
 	- 2.0.0 or above: Go back, and select Connect to This Network. If you set it up correctly, the connection should fail with the message "Registration is required to use this network.", and you will enter Pegaswitch.
-}
 8. Congratulations! You have successfully run Pegaswitch on your console!
 
 Optional: Setup fakenews
