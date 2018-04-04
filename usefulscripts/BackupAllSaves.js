@@ -28,10 +28,22 @@ function GetProfile(id) {
 	});
 }
 
+function GetIApplicationManager(cb) {
+	if(sc.hasService("ns:am")) {
+		return sc.getService("ns:am", cb);
+	} else {
+		return sc.getService("ns:am2", (ns) => {
+			return sc.ipcMsg(7996).sendTo(ns).assertOk().withHandles((r, m, c) => { // GetIApplicationManager
+				return cb(m[0]);
+			});
+		});
+	}
+}
+
 function GetTitleIds() {
-	return sc.getService("ns:am", (nsam) => {
+	return GetIApplicationManager((iam) => {
 		var buf = new Uint32Array(0x18*32); // 32 games max
-		var count = sc.ipcMsg(0).datau32(0).bDescriptor(buf).sendTo(nsam).assertOk().data[0];
+		var count = sc.ipcMsg(0).datau32(0).bDescriptor(buf).sendTo(iam).assertOk().data[0];
 		var tids = [];
 		for(var i = 0; i < count; i++) {
 			tids[i] = [buf[6*i+0], buf[6*i+1]];
