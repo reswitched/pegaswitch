@@ -25,7 +25,6 @@ console.log('');
 
 let connection = null;
 let connections = {};
-let nameToAddr = {};
 
 function sendMsg (cmd, args = []) {
 	connection.send(JSON.stringify({
@@ -48,6 +47,10 @@ function loadConfig() {
 		fs.writeFileSync("config.json", JSON.stringify(config), "utf-8");
 		return config;
 	}
+}
+
+function saveConfig(config) {
+	fs.writeFileSync("config.json", JSON.stringify(config), "utf-8");
 }
 
 const fns = {
@@ -186,14 +189,20 @@ const fns = {
 		noSend: true,
 		setup: function (args, callback) {
 			var config = loadConfig();
-			config[args[0]] = true;
-			fs.writeFileSync("config.json", JSON.stringify(config), "utf-8");
-			console.log("enabled " + args[0] + " (won't take effect until you reconnect switch)");
-			return callback();
+			if (args[0] && (config[args[0]] === undefined || typeof config[args[0]] == "boolean")) {
+				config[args[0]] = true;
+				saveConfig(config);
+				console.log("enabled " + args[0] + " (won't take effect until you reconnect switch)");
+				return callback();
+			}
+			else {
+				return callback(null, 'Cannot set invalid or reserved configuration item');				
+			}
 		},
 		complete: function (line) {
 			var args = line.split(" ");
-			var completions = Object.keys(loadConfig()).map((c) => args[0] + " " + c);
+			var config = loadConfig();
+			var completions = Object.keys(config).filter((c) => typeof config[c] == "boolean");
 			return [args[1].length ? completions.filter((k) => k.startsWith(line) && k.length > 0) : completions, line];
 		}
 	},
@@ -203,14 +212,20 @@ const fns = {
 		noSend: true,
 		setup: function (args, callback) {
 			var config = loadConfig();
-			config[args[0]] = false;
-			fs.writeFileSync("config.json", JSON.stringify(config), "utf-8");
-			console.log("disabled " + args[0] + " (won't take effect until you reconnect switch)");
-			return callback();
+			if (args[0] && (config[args[0]] === undefined || typeof config[args[0]] == "boolean")) {
+				config[args[0]] = false;
+				saveConfig(config);
+				console.log("disabled " + args[0] + " (won't take effect until you reconnect switch)");
+				return callback();
+			}
+			else {
+				return callback(null, 'Cannot set invalid or reserved configuration item');				
+			}
 		},
 		complete: function (line) {
 			var args = line.split(" ");
-			var completions = Object.keys(loadConfig()).map((c) => args[0] + " " + c);
+			var config = loadConfig();
+			var completions = Object.keys(config).filter((c) => typeof config[c] == "boolean");
 			return [args[1].length ? completions.filter((k) => k.startsWith(line) && k.length > 0) : completions, line];
 		}
 	},
@@ -233,21 +248,45 @@ const fns = {
 		},
 		complete(line) {
 			var args = line.split(" ");
-			var names = Object.keys(connections).filter((k) => connections[k]).concat(Object.keys(nameToAddr)).filter(lookupConnection);
+			var names = Object.keys(connections).filter((k) => connections[k]).concat(Object.values(connections).map(ws => ws.name));
 			var completions = names;
 			completions.push("none");
 			return [args[1].length ? completions.filter((k) => k.startsWith(args[1]) && k.length > 0) : completions, args[1]];
 		}
 	},
+	name: {
+		help: 'name <new-name>',
+		helptxt: 'Create or change a custom nickname for the selected console',
+		noSend: true,
+		setup(args, callback) {
+			if (!connection || !connection.macAddr) {
+				utils.log(('First `select` a connected console').bold);
+			}
+			else if (!args[0] || args[0].length < 1) {
+				utils.log(('Enter a nickname for this Switch console').bold);
+			} else {
+				try {
+					setConsoleName(connection.macAddr, args[0]);
+				}
+				catch (e) {
+					utils.log((e.message).bold);
+				}
+			}
+			return callback();
+		}
+	},
 	consoles: {
-		help: 'consoles',
+		help: 'consoles [--showmac]',
 		helptxt: 'List connected consoles',
 		noSend: true,
 		setup(args, callback) {
 			var t = new Table();
 			Object.values(connections).forEach((ws) => {
 				if(ws != null) {
-					t.cell("Wi-Fi MAC Address", ws.macAddr);
+					if (args[0] == '--showmac')
+						t.cell("Wi-Fi MAC Address", ws.macAddr);
+					else
+						t.cell("Wi-Fi MAC Address", "********" + ws.macAddr.substr(ws.macAddr.length - 4));
 					t.cell("Version", ws.fwVersion);
 					t.cell("Name", ws.name || "<unnamed>");
 					t.newRow();
@@ -415,36 +454,77 @@ const r = repl.start({
 
 History(r, historyPath);
 
-function consoleName(mac) {
-	return mac;
+// find a console name for this mac in the config or create one if it doesn't exist
+function getConsoleName(mac) {
+	var config = loadConfig();
+	if (config.names && config.names[mac]) {
+		return config.names[mac];
+	}
+	else {
+		try {
+			var name = mac.substr(mac.length - 4);
+			setConsoleName(mac, name);
+			return name;
+		}
+		catch (e) {
+			return mac;
+		}
+	}
+}
+
+function setConsoleName(mac, name) {
+	var pattern = /[\W]/; // non-word characters
+	if (name.match(pattern))
+		throw new Error('name cannot contain non-word characters');
+
+	var config = loadConfig();
+	if (!config.names) {
+		config.names = {};
+	}
+	// if the name exists, don't set it
+	if (Object.values(config.names).includes(name)) {
+		if (config.names[mac] != name)
+			throw new Error('name already configured for a different console'); // name conflict
+	}
+	else {
+		if (connections[mac])
+			connections[mac].name = name;
+		config.names[mac] = name;
+		saveConfig(config);
+		setPrompt();
+	}
 }
 
 function setPrompt() {
 	var jsPart = isJavascript ? "/js" : "";
 	if(connection) {
-		r.setPrompt(("switch '" + consoleName(connection.macAddr) + "' (" + connection.fwVersion + ")" + jsPart).cyan + "> ");
+		r.setPrompt(("switch '" + connection.name + "' (" + connection.fwVersion + ")" + jsPart).cyan + "> ");
 	} else {
 		r.setPrompt(("switch" + jsPart).cyan + "> ");
 	}
 }
 
 function lookupConnection(name) {
-	if(connections[name]) { // mac addr
+	var config = loadConfig();
+	if(connections[name]) { // try by mac addr
 		return connections[name];
 	}
-	if(nameToAddr[name]) { // name
-		return connections[nameToAddr[name]];
+	else { // try by name
+		var byName = Object.values(connections).filter(ws => ws.name == name);
+		if(byName.length > 0) {
+			return byName[0];
+		}
 	}
 	return null;
 }
 	
-function selectConsole(mac) {
-	if(mac == null) {
+function selectConsole(lookup) {
+	if(lookup == null) {
 		connection = null;
 		setPrompt();
 		r.prompt(true);
 	} else {
-		connection = connections[mac];
+		connection = lookupConnection(lookup);
 		setPrompt();
 		r.prompt(true);
 	}
@@ -455,7 +535,7 @@ wss.on('connection', function (ws) {
 		if(ws.macAddr && connections[ws.macAddr] == ws) {
 			connections[ws.macAddr] = null;
 			console.log();
-			console.log("Switch '" + consoleName(ws.macAddr) + "' (" + ws.fwVersion + ") disconnected.");
+			console.log("Switch '" + ws.name + "' (" + ws.fwVersion + ") disconnected.");
 			if(connection === ws) {
 				selectConsole(null);
 			} else {
@@ -482,10 +562,11 @@ wss.on('connection', function (ws) {
 				mac = mac + str;
 			}
 			ws.macAddr = mac;
+			ws.name = getConsoleName(mac);
 			ws.fwVersion = data.version;
 			connections[mac] = ws;
 			console.log();
-			console.log("Switch '" + consoleName(mac) + "' (" + data.version + ") connected.");
+			console.log("Switch '" + ws.name + "' (" + ws.fwVersion + ") connected.");
 			if(connection === null || connection.macAddr == mac) {
 				selectConsole(mac);
 			} else {
