@@ -136,11 +136,7 @@ const fns = {
 				var completions = files.filter((c) => (path + c).startsWith(args[1])).map((c) => fs.lstatSync(dirPath + c).isDirectory() ? c + '/' : c).filter((c) => c.endsWith('/') || c.endsWith('.js'));
 				return [completions, matchPiece];
 			} catch (e) {
-				if (e.message.includes("no such file or directory")) {
-					return [[], line];
-				}
-				else
-					throw e;
+				return [[], line];
 			}
 		},
 		setup: function (args, callback) {
