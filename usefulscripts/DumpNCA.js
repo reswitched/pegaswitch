@@ -19,7 +19,7 @@ var TITLE_TYPE = TYPE_PROGRAM;
 var TITLE_STORAGE = STORAGE_NANDSYS;
 
 sc.enableTurbo();
-sc.escalateFilesystemAccess();
+sc.escalateFilesystemPrivileges();
 
 var dumpNCA = function(nca_id, ics_handle, sd, path, is_exfat) {
 	var size = sc.ipcMsg(14).datau32(nca_id[0], nca_id[1], nca_id[2], nca_id[3]).sendTo(ics_handle).assertOk().data;
