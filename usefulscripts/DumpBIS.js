@@ -1,5 +1,5 @@
 sc.enableTurbo();
-sc.escalateFilesystemAccess();
+sc.escalateFilesystemPrivileges();
 
 sc.getService("fsp-srv", (fspsrv) => {
 	sc.ipcMsg(1).sendPid().datau64(0).sendTo(fspsrv).assertOk();

@@ -53,7 +53,7 @@ function GetTitleIds() {
 }
 
 sc.enableTurbo();
-sc.escalateFilesystemAccess();
+sc.escalateFilesystemPrivileges();
 var date = new Date();
 var prefix = "saves-" + date.getFullYear() + "-" + (date.getMonth()+1) + "-" + date.getDate() + "-" + date.getHours() + "-" + date.getMinutes();
 var tids = GetTitleIds();
