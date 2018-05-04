@@ -9,6 +9,20 @@
   An exploit toolkit for the Nintendo Switch™
 </p>
 
+Windows dependencies
+============
+
+In order to get PegaSwitch to work on Windows, you need to have the following:  
+
+* [Python 2.7](https://www.python.org/downloads/release/python-2714/)
+* [Visual Studio 2017 (Or Build Tools for Visual Studio 2017)](https://go.microsoft.com/fwlink/?linkid=840931)
+* [Git](https://git-for-windows.github.io)
+
+You can easily install Python 2.7 and the Build Tools by running the following command in PowerShell as administrator.
+```
+npm install --global --production windows-build-tools
+```
+
 Installation
 ============
 
@@ -61,8 +75,6 @@ ex:
 ```
 C:\pegaswitch\> node start.js --logfile log.txt
 ```
-
-If you encounter problems using pegaswitch on Windows, we suggest installing through WSL.
 
 License
 =======
