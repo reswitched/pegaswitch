@@ -18,13 +18,13 @@ const yargs = require('yargs');
 
 let argv = yargs
 	.usage('Usage $0')
-	.describe('disable-curses', 'Disabled curses interface. Requires --logfile')
+	.describe('enable-curses', 'Enable curses interface.')
 	.describe('disable-dns', 'Disables builtin DNS server.')
 	.describe('ip', 'Override IP address DNS server responds with')
 	.describe('host', 'Override listen IP.')
 	.describe('logfile', 'Writes debug log to file')
 	.describe('setuid', 'Sets UID after binding ports (drop root priveleges)')
-	.example('$0 --ip 1.2.4.8 --disable-curses --logfile debug.txt --setuid 1000')
+	.example('$0 --ip 1.2.4.8 --logfile debug.txt --setuid 1000')
 	.help('h')
 	.nargs('ip', 1)
 	.nargs('host', 1)
@@ -34,9 +34,9 @@ let argv = yargs
 	.argv;
 
 if(os.platform() === 'win32') {
-	if(!argv['disable-curses']) {
+	if(argv['enable-curses']) {
 		console.warn('WARNING: pegaswitch does not support curses on Windows. Curses disabled by default.');
-		argv['disable-curses'] = true;
+		argv['enable-curses'] = false;
 	}
 
 } else if (process.getuid() !== 0) {
@@ -44,7 +44,7 @@ if(os.platform() === 'win32') {
 	process.exit();
 }	
 	
-if (argv['disable-curses'] && !argv.logfile) {
+if (!argv['enable-curses'] && !argv.logfile) {
 	argv.logfile = 'pegaswitch.log'
 	console.warn('With curses disabled, a logfile (--logfile) is required. Defaulting to \"pegaswitch.log\".');
 }
@@ -278,7 +278,7 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 		}
 	}
 
-	if (argv['disable-curses']) {
+	if (!argv['enable-curses']) {
 		console.log("Responding with address " + ipAddr);
 		console.log("Switch DNS IP: " + (argv.host || ip.address()) + " (Use this to connect)");
 		require('./repl');
