@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint no-mixed-operators: "off" */
 require('colors');
-
+const brokenConsole = require('console');
 const repl = require('repl');
 const events = require('events');
 const fs = require('fs');
@@ -35,7 +35,7 @@ function sendMsg (cmd, args = []) {
 }
 
 ee.on('error', function (message) {
-	console.error('ERROR:', message.slice(0, 2));
+	brokenConsole.error('ERROR:', message.slice(0, 2));
 });
 
 function loadConfig() {
@@ -136,7 +136,7 @@ const fns = {
 				var completions = files.filter((c) => (path + c).startsWith(args[1])).map((c) => fs.lstatSync(dirPath + c).isDirectory() ? c + '/' : c).filter((c) => c.endsWith('/') || c.endsWith('.js'));
 				return [completions, matchPiece];
 			} catch (e) {
-				throw e;
+				return [[], line];
 			}
 		},
 		setup: function (args, callback) {
@@ -168,7 +168,7 @@ const fns = {
 				return [completions, matchPiece];
 			} catch (e) {
 				throw e;
-			}			
+			}
 		},
 		setup: function (args, callback) {
 			try {
@@ -368,9 +368,9 @@ function handle (input, context, filename, callback) {
 			console.log("No consoles connected.".bold);
 			r.prompt();
 		}
-		return; 
+		return;
 	}
-  
+
 	if (fn.setup) {
 		args = fn.setup(args, callback);
 		if (!args) {
@@ -380,9 +380,9 @@ function handle (input, context, filename, callback) {
 
 	if (!fn.noSend) {
 		var handle = fn.handler ? fn.handler(args, callback) : defaultHandler(saveVal, callback);
-    
+
 		ee.once(fn.response, handle);
-    
+
 		sendMsg(cmd, args);
 
 		if (fn.wait === false) {
@@ -437,7 +437,7 @@ function lookupConnection(name) {
 	}
 	return null;
 }
-	
+
 function selectConsole(mac) {
 	if(mac == null) {
 		connection = null;
