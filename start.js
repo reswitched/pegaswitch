@@ -14,7 +14,9 @@ const mkdirp = require('mkdirp');
 const blessed = require('blessed');
 const contrib = require('blessed-contrib');
 const yargs = require('yargs');
+
 // const dnslookup = require('dns')
+
 
 let argv = yargs
 	.usage('Usage $0')
@@ -24,6 +26,8 @@ let argv = yargs
 	.describe('host', 'Override listen IP.')
 	.describe('logfile', 'Writes debug log to file')
 	.describe('setuid', 'Sets UID after binding ports (drop root priveleges)')
+	.describe('autorun', 'will run autorun/auto.js everytime a switch connects')
+	.describe('autorun-file', 'will auto run js at path specified')
 	.example('$0 --ip 1.2.4.8 --logfile debug.txt --setuid 1000')
 	.help('h')
 	.nargs('ip', 1)
@@ -42,8 +46,8 @@ if(os.platform() === 'win32') {
 } else if (process.getuid() !== 0) {
 	console.error('Please run as root so we can bind to port 53 & 80');
 	process.exit();
-}	
-	
+}
+
 if (!argv['enable-curses'] && !argv.logfile) {
 	argv.logfile = 'pegaswitch.log'
 	console.warn('With curses disabled, a logfile (--logfile) is required. Defaulting to \"pegaswitch.log\".');
@@ -66,7 +70,7 @@ let httpServerStarted;
 
 let ipAddr = argv.ip || ip.address();
 if (argv['disable-dns'] !== true) {
-  
+
 	// Spin up our DNS server
 	let dns = dnsd.createServer(function (req, res) {
 		res.end(ipAddr);
@@ -102,6 +106,28 @@ app.get('/', function (req, res) {
 		res.set('X-Organization', 'Nintendo');
 	}
 	serveIndex(req, res);
+});
+
+var autorunScript = false;
+var jsPath = 'autorun/auto.js';
+
+app.get('/autorun', function (req, res){
+
+	if (autorunScript === true){
+		// attempts to find given file from path and send it
+		try {
+			var script = fs.readFileSync( path.resolve(__dirname, jsPath));
+			res.send(script);
+		} catch (e) {
+			res.status(404);
+			res.send("Script not found")
+			console.error("Script not found");
+			process.exit();
+		}
+	} else {
+		res.send("");
+	}
+
 });
 
 app.get('/minmain.js', function (req, res) {
@@ -141,7 +167,7 @@ app.get('/bundle.js', function (req, res) {
 		};
 		fs.writeFileSync("config.json", JSON.stringify(config), "utf-8");
 	}
-  
+
 	browserify({
 		entries: [ 'exploit/main.js' ],
 		cache: {},
@@ -251,6 +277,7 @@ httpServerStarted = new Promise((resolve, reject) => {
 });
 
 Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
+
 	if (argv['setgid'] !== undefined) {
 		process.setgid(argv['setgid']);
 		if(process.getgid() === 0) {
@@ -258,11 +285,30 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 			process.exit(1);
 		}
 	}
-    
-    if (argv['webapplet'] !== undefined) {
+
+  if (argv['webapplet'] !== undefined) {
 		fakeInternetEnabled = true;
 	}
-  
+
+	if (argv['autorun'] !== undefined) {
+		autorunScript = true;
+	}
+
+	if (argv['autorun-file'] !== undefined){
+		autorunScript = true;
+		jsPath = argv['autorun-file'];
+	}
+
+	// check that file is present
+	if (autorunScript === true){
+		try {
+				fs.readFileSync( path.resolve(__dirname, jsPath))
+		} catch (e) {
+				console.error(`\"${jsPath}\" not found`);
+				process.exit();
+		}
+	}
+
 	if (argv['setuid'] !== undefined) {
 		if (argv['setgid'] === undefined) {
 			process.setgid(argv['setuid']);
@@ -349,7 +395,7 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 
 		//Output ip addresses
 		repl.write("Responding with address " + ipAddr + "\r\n");
-		repl.write("Switch DNS IP: " + (argv.host || ip.address()) + " (Use this to connect)");	
+		repl.write("Switch DNS IP: " + (argv.host || ip.address()) + " (Use this to connect)");
 	}
 
 }, (e) => {
