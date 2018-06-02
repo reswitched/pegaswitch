@@ -1,1 +1,6 @@
-{"sdbcore":true}
+{
+  "sdbcore":true,
+  "autorun":true,
+  "autorunScript": false,
+  "jsPath": ""
+}
