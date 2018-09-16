@@ -8,7 +8,7 @@ sc.getService("time:s", (time_s)=>{
 	see https://reswitched.github.io/SwIPC/ifaces.html#nn::timesrv::detail::service::IStaticService for more info
 	*/
 	sc.ipcMsg(1).sendTo(time_s).assertOk().withHandles((response, moved, copied) =>{
-		sysClock = moved[0]
+		sysClock = moved[0];
 		/*
 		Set time
 		We send message 1 (SetCurrentTime) using the sysclock handle we just got, which sets the POSIX time
@@ -24,5 +24,5 @@ sc.getService("time:s", (time_s)=>{
 		*/
 		var currentTime = sc.ipcMsg(0).sendTo(sysClock).assertOk().data[0];
 		utils.log("New time - "+currentTime);
-	})
-})
+	});
+});
