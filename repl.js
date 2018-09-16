@@ -450,6 +450,45 @@ function selectConsole(mac) {
 	}
 }
 
+// looks for autorun var [bool]
+// in config.json
+function checkAutoRun(){
+	var result = false;
+
+	try{
+		var tmp = loadConfig().autorunScript;
+		if (typeof tmp === "boolean"){
+			result = tmp;
+		} else {
+			console.log("tried to load non-bool input");
+		}
+	} catch (e){
+		console.log("failed to load config.json");
+	}
+
+	return result;
+}
+
+
+// tries to load the js file speified in config.json
+function loadScript(){
+	var script = "";
+	try{
+		scriptPath = loadConfig().jsPath;
+		script = fns.evalfile.setup([scriptPath], (obj, output) => {
+			 throw output;
+	 	});
+
+		script += `alert(\"Ran ${scriptPath}\");`
+
+	} catch (e){
+		console.log(e);
+		process.exit(1);
+	}
+
+	return script;
+}
+
 wss.on('connection', function (ws) {
 	ws.on('close', function () {
 		if(ws.macAddr && connections[ws.macAddr] == ws) {
@@ -468,6 +507,7 @@ wss.on('connection', function (ws) {
 		data = JSON.parse(data);
 		const type = data.type;
 		const response = data.response;
+
 		if(type == "identification") {
 			var u8 = new Uint8Array(8);
 			var u32 = new Uint32Array(u8.buffer);
@@ -488,6 +528,13 @@ wss.on('connection', function (ws) {
 			console.log("Switch '" + consoleName(mac) + "' (" + data.version + ") connected.");
 			if(connection === null || connection.macAddr == mac) {
 				selectConsole(mac);
+
+				if(checkAutoRun()){
+					script = loadScript();
+					console.log("autorun enabled");
+					sendMsg("evalfile", [script]);
+				}
+
 			} else {
 				r.prompt(true);
 			}
