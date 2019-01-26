@@ -105,12 +105,19 @@ app.get('/', function (req, res) {
 });
 
 app.get('/minmain.js', function (req, res) {
-	res.end(fs.readFileSync(path.resolve(__dirname, 'exploit/minmain.js')));
+	if ((req.headers['user-agent'].indexOf('NF/4.0.0.8.9 ') !== -1)
+		|| (req.headers['user-agent'].indexOf('NF/4.0.0.9.3 ') !== -1)
+		|| (req.headers['user-agent'].indexOf('NF/4.0.0.10.13 ') !== -1))
+	{
+		res.end(fs.readFileSync(path.resolve(__dirname, 'exploit/minmain_5.0.0-6.0.1.js')));
+	} else {
+		res.end(fs.readFileSync(path.resolve(__dirname, 'exploit/minmain_1.0.0-4.1.0.js')));
+	}
 });
 
 app.get('/fake_news.mp', function (req, res) {
 	var u8 = new Uint8Array(fs.readFileSync(path.resolve(__dirname, 'files/fake_news.mp')));
-    res.end(JSON.stringify(Array.prototype.slice.call(u8)));
+	res.end(JSON.stringify(Array.prototype.slice.call(u8)));
 });
 
 app.get('/nros/:nroname', function (req, res) {
@@ -258,8 +265,8 @@ Promise.all([dnsServerStarted, httpServerStarted]).then(() => {
 			process.exit(1);
 		}
 	}
-    
-    if (argv['webapplet'] !== undefined) {
+	
+	if (argv['webapplet'] !== undefined) {
 		fakeInternetEnabled = true;
 	}
   
