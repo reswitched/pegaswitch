@@ -215,7 +215,7 @@ const fns = {
 		}
 	},
 	select: {
-		help: 'select <mac>|<name>|none',
+		help: 'select <serial>|<name>|none',
 		helptxt: 'Select a different Switch to send commands to',
 		noSend: true,
 		setup(args, callback) {
@@ -224,7 +224,7 @@ const fns = {
 			} else {
 				var ws = lookupConnection(args[0]);
 				if(ws) {
-					selectConsole(ws.macAddr);
+					selectConsole(ws.serial);
 				} else {
 					utils.log(("No such console '" + args[0] + "'. Try `consoles` to get a list of connected consoles").bold);
 				}
@@ -247,7 +247,7 @@ const fns = {
 			var t = new Table();
 			Object.values(connections).forEach((ws) => {
 				if(ws != null) {
-					t.cell("Wi-Fi MAC Address", ws.macAddr);
+					t.cell("Serial Number", ws.serial);
 					t.cell("Version", ws.fwVersion);
 					t.cell("Name", ws.name || "<unnamed>");
 					t.newRow();
@@ -415,21 +415,21 @@ const r = repl.start({
 
 History(r, historyPath);
 
-function consoleName(mac) {
-	return mac;
+function consoleName(serial) {
+	return serial;
 }
 
 function setPrompt() {
 	var jsPart = isJavascript ? "/js" : "";
 	if(connection) {
-		r.setPrompt(("switch '" + consoleName(connection.macAddr) + "' (" + connection.fwVersion + ")" + jsPart).cyan + "> ");
+		r.setPrompt(("switch '" + consoleName(connection.serial) + "' (" + connection.fwVersion + ")" + jsPart).cyan + "> ");
 	} else {
 		r.setPrompt(("switch" + jsPart).cyan + "> ");
 	}
 }
 
 function lookupConnection(name) {
-	if(connections[name]) { // mac addr
+	if(connections[name]) { // serial number
 		return connections[name];
 	}
 	if(nameToAddr[name]) { // name
@@ -438,13 +438,13 @@ function lookupConnection(name) {
 	return null;
 }
 
-function selectConsole(mac) {
-	if(mac == null) {
+function selectConsole(serial) {
+	if(serial == null) {
 		connection = null;
 		setPrompt();
 		r.prompt(true);
 	} else {
-		connection = connections[mac];
+		connection = connections[serial];
 		setPrompt();
 		r.prompt(true);
 	}
@@ -452,10 +452,10 @@ function selectConsole(mac) {
 
 wss.on('connection', function (ws) {
 	ws.on('close', function () {
-		if(ws.macAddr && connections[ws.macAddr] == ws) {
-			connections[ws.macAddr] = null;
+		if(ws.serial && connections[ws.serial] == ws) {
+			connections[ws.serial] = null;
 			console.log();
-			console.log("Switch '" + consoleName(ws.macAddr) + "' (" + ws.fwVersion + ") disconnected.");
+			console.log("Switch '" + consoleName(ws.serial) + "' (" + ws.fwVersion + ") disconnected.");
 			if(connection === ws) {
 				selectConsole(null);
 			} else {
@@ -469,30 +469,24 @@ wss.on('connection', function (ws) {
 		const type = data.type;
 		const response = data.response;
 		if(type == "identification") {
-			var u8 = new Uint8Array(8);
+			var u8 = new Uint8Array(0x18);
 			var u32 = new Uint32Array(u8.buffer);
-			u32[0] = data.mac[0];
-			u32[1] = data.mac[1];
-			var mac = "";
-			for(var i = 0; i < 6; i++) {
-				var str = u8[i].toString(16);
-				while(str.length < 2) {
-					str = "0" + str;
-				}
-				mac = mac + str;
+			for(var i = 0; i < data.serial.length; i++) {
+				u32[i] = data.serial[i];
 			}
-			ws.macAddr = mac;
+			var serial = String.fromCharCode.apply(null, u8);
+			ws.serial = serial;
 			ws.fwVersion = data.version;
-			connections[mac] = ws;
+			connections[serial] = ws;
 			console.log();
-			console.log("Switch '" + consoleName(mac) + "' (" + data.version + ") connected.");
-			if(connection === null || connection.macAddr == mac) {
-				selectConsole(mac);
+			console.log("Switch '" + consoleName(serial) + "' (" + data.version + ") connected.");
+			if(connection === null || connection.serial == serial) {
+				selectConsole(serial);
 			} else {
 				r.prompt(true);
 			}
 		} else {
-			ee.emit(type, response, ws.macAddr);
+			ee.emit(type, response, ws.serial);
 		}
 	});
 });
