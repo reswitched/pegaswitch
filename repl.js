@@ -180,6 +180,13 @@ const fns = {
 			}
 		}
 	},
+	nspwn: {
+		response: 'redirected',
+		help: 'nspwn <path>',
+		helptext: 'Redirects Album applet\'s exefs to the given path',
+		minArgs: 1,
+		maxArgs: 1
+	},
 	enable: {
 		help: 'enable <property>',
 		helptxt: 'Set the config property to `true`',
