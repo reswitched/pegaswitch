@@ -1,9 +1,9 @@
 <p align="center">
-  <img style="width: 50%" src="https://i.imgur.com/bHjfC0Q.png">
+  <img style="width: 50%" src="https://i.imgur.com/ZK4k3ie.png"><br/>
   By
   <br/>
   <br/>
-  <img style="width: 100px" src="https://i.imgur.com/w2u26sA.png">
+  <img style="width: 100px" src="https://i.imgur.com/DlfYXf9.png">
   <br/>
   <br/>
   An exploit toolkit for the Nintendo Switch™
